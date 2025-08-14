@@ -1,0 +1,2908 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta charset="utf-8" />
+    <title>7%</title>
+    <script src="https://unpkg.com/dexie/dist/dexie.js"></script>
+    <style>
+        /* --- 全局样式 和 变量定义 --- */
+        @import url("https://cdnjs.cloudflare.com/ajax/libs/meyer-reset/2.0/reset.min.css");
+
+        * {
+            -webkit-font-smoothing: antialiased;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --label-colordarkprimary: rgba(255, 255, 255, 1);
+            --caption1-bold-font-family: "SF Pro Text", Helvetica, sans-serif;
+            --caption1-bold-font-weight: 500;
+            --caption1-bold-font-size: 12px;
+            --caption1-bold-letter-spacing: 0px;
+            --caption1-bold-line-height: 16px;
+            --caption1-bold-font-style: normal;
+        }
+
+        body {
+
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        input,
+        textarea {
+            user-select: auto;
+            -webkit-user-select: auto;
+        }
+
+        html,
+        body {
+            margin: 0px;
+            height: 100%;
+            background-color: #c4c4f0;
+            background-image: url('https://images.unsplash.com/photo-1554189097-7e76a28bde39');
+            background-size: cover;
+            background-position: center;
+            font-family: var(--caption1-bold-font-family);
+            overflow: hidden;
+        }
+
+        .page-container {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+            padding-bottom: 20px;
+        }
+
+        .search {
+            width: 90%;
+            max-width: 65px;
+            height: 28px;
+            background-color: #f5f5f566;
+            border-radius: 18px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            padding: 0 12px;
+        }
+
+        .search .content {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .search .SF-symbol {
+            width: 15px;
+            height: 15px;
+            flex-shrink: 0;
+        }
+
+        .search .div {
+            font-weight: var(--caption1-bold-font-weight);
+            color: var(--label-colordarkprimary);
+            font-size: 14px;
+            letter-spacing: var(--caption1-bold-letter-spacing);
+            line-height: var(--caption1-bold-line-height);
+            white-space: nowrap;
+            background: transparent;
+            border: none;
+            padding: 0;
+        }
+
+        .dock-container {
+            width: 90%;
+            max-width: 369px;
+            height: 90px;
+            border-radius: 30px;
+            background-color: rgba(245, 245, 245, 0.5);
+            backdrop-filter: blur(40px);
+            -webkit-backdrop-filter: blur(40px);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 18px;
+        }
+
+        .app-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 13px;
+            flex-shrink: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .app-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        #status-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 16px 35px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: var(--label-colordarkprimary);
+            transition: color 0.3s, fill 0.3s;
+            z-index: 1000;
+            box-sizing: border-box;
+            pointer-events: none;
+        }
+
+        #status-bar-time {
+            font-weight: 600;
+            font-size: 15px;
+        }
+
+        #status-bar-right-icons {
+            display: flex;
+            align-items: flex-end;
+            gap: 7px;
+            position: relative;
+            top: 1px;
+        }
+
+        #status-bar-right-icons svg {
+            height: 13px;
+            width: auto;
+        }
+
+        .status-bar-svg-icon path {
+            fill: var(--label-colordarkprimary);
+        }
+
+        .battery-container {
+            display: flex;
+            align-items: center;
+            height: 13px;
+            position: relative;
+            bottom: -0.5px;
+        }
+
+        .battery-frame {
+            stroke: var(--label-colordarkprimary);
+            stroke-width: 1px;
+            fill: none;
+        }
+
+        .battery-terminal,
+        .battery-fill {
+            fill: var(--label-colordarkprimary);
+        }
+
+        .battery-fill {
+            transition: width 0.5s ease, fill 0.5s ease;
+        }
+
+        #battery-charging-fill {
+            fill: #34C759;
+        }
+
+        .battery-charging-indicator {
+            transform: scale(0.8) translate(10px, -0.65px);
+        }
+
+        .battery-charging-indicator path {
+            stroke: black;
+        }
+
+        #status-bar.dark-text {
+            color: black;
+        }
+
+        #status-bar.dark-text .status-bar-svg-icon path,
+        #status-bar.dark-text .battery-terminal,
+        #status-bar.dark-text .battery-fill {
+            fill: black;
+        }
+
+        #status-bar.dark-text .battery-frame {
+            stroke: black;
+        }
+
+        #status-bar.dark-text .battery-fill[fill="#ff3b30"] {
+            fill: #ff3b30;
+        }
+
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #F2F2F7;
+            transition: opacity 0.35s ease-in-out, transform 0.35s ease-in-out;
+            opacity: 0;
+            transform: scale(0.95);
+            visibility: hidden;
+            pointer-events: none;
+            z-index: 100;
+            overflow-y: auto;
+        }
+
+        .screen.active {
+            opacity: 1;
+            transform: scale(1);
+            visibility: visible;
+            pointer-events: auto;
+        }
+
+        .screen.closing {
+            opacity: 0;
+            transform: scale(0.95);
+        }
+
+        #home-screen {
+            background-color: transparent;
+            z-index: 10;
+            overflow: hidden;
+        }
+
+        #settings-screen {
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+        }
+
+        .settings-nav {
+            background-color: #F2F2F7;
+            padding: 10px 16px;
+            padding-top: 60px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .settings-back-bar {
+            font-size: 17px;
+            color: #007AFF;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+
+        .settings-header h1 {
+            font-size: 34px;
+            font-weight: 700;
+            text-align: center;
+        }
+
+        .settings-search-container {
+            padding-top: 15px;
+        }
+
+        .settings-search-bar {
+            background-color: rgba(118, 118, 128, 0.12);
+            border-radius: 10px;
+            padding: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .settings-search-bar .placeholder {
+            flex-grow: 1;
+            color: rgba(60, 60, 67, 0.60);
+            font-size: 17px;
+        }
+
+        .settings-content {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            padding: 0 16px 20px 16px;
+        }
+
+        .settings-group {
+            background-color: white;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .settings-item {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding-left: 16px;
+            cursor: pointer;
+        }
+
+        .settings-item:not(:last-child) .settings-item-content {
+            border-bottom: 0.5px solid rgba(60, 60, 67, 0.36);
+        }
+
+        .settings-item-content {
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            padding: 11px 16px 11px 0;
+            min-height: 58px;
+        }
+
+        .settings-item .icon-bg {
+            width: 30px;
+            height: 30px;
+            border-radius: 7px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .settings-item .label {
+            flex-grow: 1;
+            font-size: 17px;
+        }
+
+        .settings-item .value {
+            color: rgba(60, 60, 67, 0.60);
+            font-size: 17px;
+            margin-right: 8px;
+        }
+
+        .settings-item .chevron {
+            fill: #3C3C43;
+            fill-opacity: 0.3;
+        }
+
+        .profile-card {
+            padding: 8px 16px;
+            display: flex;
+            align-items: center;
+            gap: 13px;
+        }
+
+        .profile-card .chevron {
+            margin-left: auto;
+            flex-shrink: 0;
+        }
+
+        .profile-card .name {
+            font-size: 22px;
+        }
+
+        .profile-card .details {
+            font-size: 13px;
+            color: rgba(60, 60, 67, 0.60);
+        }
+
+        .avatar-container {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background-color: #EFEFF4;
+            padding: 3px;
+            flex-shrink: 0;
+        }
+
+        .profile-avatar {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        body.dark-mode .settings-nav {
+            background-color: #000000;
+        }
+
+        body.dark-mode #settings-screen {
+            background-color: #000000;
+        }
+
+        body.dark-mode .settings-group,
+        body.dark-mode .profile-card {
+            background-color: #1C1C1E;
+        }
+
+        body.dark-mode .settings-header h1,
+        body.dark-mode .settings-item .label,
+        body.dark-mode .profile-card .name {
+            color: #F2F2F7;
+        }
+
+        body.dark-mode .profile-card .details,
+        body.dark-mode .settings-item .value {
+            color: rgba(235, 235, 245, 0.6);
+        }
+
+        body.dark-mode .settings-search-bar {
+            background-color: rgba(118, 118, 128, 0.24);
+        }
+
+        body.dark-mode .settings-search-bar .placeholder {
+            color: rgba(235, 235, 245, 0.6);
+        }
+
+        body.dark-mode .settings-item:not(:last-child) .settings-item-content {
+            border-bottom-color: rgba(84, 84, 88, 0.65);
+        }
+
+        body.dark-mode .avatar-container {
+            background-color: #3A3A3C;
+        }
+
+        body.dark-mode .chevron {
+            fill: #EBEBF5;
+            fill-opacity: 0.3;
+        }
+
+        .toggle-switch {
+            width: 51px;
+            height: 31px;
+            position: relative;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .toggle-switch .track {
+            width: 100%;
+            height: 100%;
+            background-color: rgba(120, 120, 128, 0.16);
+            border-radius: 99px;
+            transition: background-color 0.2s;
+        }
+
+        .toggle-switch .thumb {
+            width: 27px;
+            height: 27px;
+            position: absolute;
+            left: 2px;
+            top: 2px;
+            background: white;
+            border-radius: 99px;
+            box-shadow: 0px 3px 1px rgba(0, 0, 0, 0.06);
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .toggle-switch.on .track {
+            background-color: #34C759;
+        }
+
+        .toggle-switch.on .thumb {
+            transform: translateX(20px);
+        }
+        /* --- 创建角色屏幕样式 --- */
+
+
+.create-char-content {
+    flex-grow: 1;
+    padding: 20px;
+    padding-top: 100px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 25px;
+    overflow-y: auto;
+}
+
+.avatar-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+}
+.char-avatar {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    object-fit: cover;
+    box-shadow: 0px 8px 25px rgba(0, 0, 0, 0.12);
+    border: 3px solid white;
+    background-color: white; 
+    font-size: 0;
+    color: transparent;
+}
+.upload-avatar-text {
+    color: #007AFF;
+    font-size: 17px;
+    font-weight: 500;
+}
+
+.char-form {
+    width: 100%;
+    max-width: 400px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.char-input, .char-textarea {
+    width: 100%;
+    border: none;
+    background-color: white;
+    border-radius: 12px;
+    padding: 16px;
+    font-size: 17px;
+    box-shadow: 0px 3px 15px rgba(0, 0, 0, 0.07);
+    outline-color: #007AFF;
+}
+
+.char-textarea {
+    height: 150px;
+    resize: none;
+    font-family: inherit; 
+}
+
+
+.char-action-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+    margin-top: 20px; 
+}
+
+.action-button {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transform: scale(1); 
+}
+.action-button svg {
+    width: 25px; 
+    height: 25px;
+}
+
+.action-button:active {
+    transform: scale(0.6) translateY(1px);
+}
+
+
+.save-char-button:active {
+    background-color: #0056b3;
+}
+
+        /* --- 灵动岛样式控制面板 --- */
+        :root {
+            --di-top-distance: 35px;
+            --di-expanded-height: 30px;
+            --di-animation-duration: 0.5s;
+        }
+
+        /* --- 灵动岛样式 --- */
+        #dynamic-island {
+            position: absolute;
+            top: var(--di-top-distance);
+            left: 50%;
+            z-index: 2001;
+            background-color: black;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            opacity: 0;
+            transform: translateX(-50%) scale(0.5);
+            pointer-events: none;
+            width: auto;
+            padding: 0 20px;
+            height: 36px;
+            border-radius: 25px;
+            transition: all var(--di-animation-duration) cubic-bezier(0.4, 0, 0.2, 0.8);
+        }
+
+        #dynamic-island.expanded {
+            height: var(--di-expanded-height);
+            border-radius: 35px;
+            opacity: 1;
+            transform: translateX(-50%) scale(1);
+            pointer-events: auto;
+        }
+
+        #dynamic-island .di-content {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            opacity: 0;
+            transform: scale(0.9);
+            transition: all 0.4s ease-out 0.1s;
+        }
+
+        #dynamic-island.expanded .di-content {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        #dynamic-island .di-icon {
+            width: 40px;
+            height: 40px;
+            flex-shrink: 0;
+            font-size: 24px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #dynamic-island .di-text {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            text-align: left;
+        }
+
+        #dynamic-island .di-title {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        #dynamic-island .di-detail {
+            font-size: 14px;
+            opacity: 0.7;
+        }
+
+        /* --- 弹出面板样式 --- */
+        .modal-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2000;
+            display: none;
+            justify-content: center;
+            align-items: flex-end;
+        }
+
+        .modal-container.active {
+            display: flex;
+        }
+
+        .modal-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(2px);
+        }
+
+        .modal-content {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            background: #F2F2F7;
+            border-top-left-radius: 16px;
+            border-top-right-radius: 16px;
+            padding: 15px 25px 30px;
+            box-shadow: 0 -5px 25px rgba(0, 0, 0, 0.1);
+            transform: translateY(100%);
+            transition: transform 0.5s cubic-bezier(0.25, 0.1, 0.25, 1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 18px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-container.active .modal-content {
+            transform: translateY(0);
+        }
+
+        .modal-handle {
+            width: 40px;
+            height: 5px;
+            background-color: #C9C9CE;
+            border-radius: 2.5px;
+            margin-bottom: 10px;
+            cursor: pointer;
+        }
+
+        .modal-content h3 {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .form-group {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .form-group label {
+            font-size: 15px;
+            font-weight: 500;
+            padding-left: 5px;
+        }
+
+        .modal-content input[type="text"],
+        .modal-content input[type="password"],
+        .modal-content select {
+            width: 100%;
+            height: 44px;
+            padding: 0 15px;
+            background-color: white;
+            border: 1px solid #E5E5EA;
+            border-radius: 12px;
+            font-size: 16px;
+            outline: none;
+        }
+
+        .modal-content select:disabled {
+            background-color: #F5F5F5;
+            color: #C7C7CD;
+        }
+
+        .modal-content .connect-button {
+            background: none;
+            border: none;
+            color: #007AFF;
+            font-size: 17px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+
+        .modal-content .save-button:disabled {
+            background-color: #8E8E93;
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .slider-group {
+            gap: 12px;
+        }
+
+        .slider-group label {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .slider-wrapper {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .slider-wrapper span {
+            color: #8A8A8E;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            flex-grow: 1;
+            height: 4px;
+            background: linear-gradient(to right, #007AFF 0%, #007AFF var(--progress-percent, 50%), #E5E5EA var(--progress-percent, 50%), #E5E5EA 100%);
+            border-radius: 2px;
+            outline: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            position: relative;
+            width: 28px;
+            height: 28px;
+            background: #FFFFFF;
+            border-radius: 50%;
+            border: 0.5px solid rgba(0, 0, 0, 0.04);
+            box-shadow: 0px 0.5px 4px rgba(0, 0, 0, 0.12), 0px 2px 3px rgba(0, 0, 0, 0.15);
+            cursor: pointer;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 28px;
+            height: 28px;
+            background: #FFFFFF;
+            border-radius: 50%;
+            border: 0.5px solid rgba(0, 0, 0, 0.04);
+            box-shadow: 0px 0.5px 4px rgba(0, 0, 0, 0.12), 0px 2px 3px rgba(0, 0, 0, 0.15);
+            cursor: pointer;
+        }
+
+        /* --- 灵动岛纯文本居中样式 --- */
+        #dynamic-island .di-icon,
+        #dynamic-island .di-detail {
+            display: none;
+        }
+
+        #dynamic-island .di-content {
+            gap: 0;
+            justify-content: center;
+        }
+
+        #dynamic-island .di-text {
+            text-align: center;
+        }
+
+        #dynamic-island .di-title {
+            font-size: 14px;
+            font-weight: 400;
+        }
+
+        /* --- 壁纸设置抽屉样式 --- */
+        #wallpaper-settings-modal .modal-content {
+            gap: 20px;
+        }
+
+        #reset-wallpaper-btn {
+            position: absolute;
+            top: 20px;
+            right: 25px;
+            cursor: pointer;
+            opacity: 0.8;
+            transition: opacity 0.2s, transform 0.2s;
+        }
+
+        #reset-wallpaper-btn:hover {
+            opacity: 1;
+        }
+
+        #reset-wallpaper-btn:active {
+            transform: scale(0.9);
+        }
+
+        #wallpaper-preview {
+            width: 150px;
+            height: 300px;
+            /* 模拟手机屏幕比例 */
+            border: 1.5px solid rgba(0, 0, 0, 0.1);
+            border-radius: 20px;
+            background-size: cover;
+            background-position: center;
+            background-color: #e0e0e0;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        /* --- API抽屉的最小高度 --- */
+#api-settings-modal .modal-content {
+    min-height: 590px;
+}
+.footer-note {
+    font-size: 13px;
+    color: #8A8A8E; 
+    text-align: center;
+    margin-top: 15px; 
+    line-height: 1.4; 
+    max-width: 90%;   
+}
+
+body.modal-is-open {
+    overflow: hidden;
+}
+/* --- App图标点击动画 --- */
+@keyframes icon-bounce {
+    0% { transform: scale(1); }
+    50% { transform: scale(0.85); }
+    100% { transform: scale(1); }
+}
+
+.app-icon.animating {
+    animation: icon-bounce 0.3s ease-in-out;
+}
+/* --- 微信界面样式 --- */
+#wechat-screen {
+    background-color: #ededed; /* 微信的浅灰色背景 */
+    color: #000;
+    display: flex;
+    flex-direction: column;
+}
+.wechat-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 90px;
+    padding: 0 15px;
+    padding-top: 45px; 
+    background-color: #ededed;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 10;
+    box-sizing: border-box;
+}
+.wechat-header .header-title {
+    font-size: 18px;
+    font-weight: 600;
+}
+.wechat-header .header-icon {
+    cursor: pointer;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.wechat-content {
+    flex-grow: 1;
+    padding-top: 90px; 
+    padding-bottom: 80px; 
+    overflow-y: auto;
+}
+.chat-item {
+    display: flex;
+    align-items: center;
+    padding: 10px 15px;
+    cursor: pointer;
+    border-bottom: 0.5px solid #d9d9d9;
+}
+.chat-item .avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 6px; /* 参考微信的圆角 */
+    margin-right: 12px;
+}
+.chat-item .message-details {
+    flex-grow: 1;
+    overflow: hidden;
+}
+.chat-item .name-time {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 5px;
+}
+.chat-item .name {
+    font-size: 16px;
+    font-weight: 500;
+}
+.chat-item .time {
+    font-size: 12px;
+    color: #b2b2b2;
+}
+.chat-item .last-message {
+    font-size: 14px;
+    color: #b2b2b2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.wechat-tab-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 80px; 
+    padding-bottom: 25px; 
+    background-color: #f7f7f7;
+    border-top: 0.5px solid #dcdcdc;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    z-index: 10;
+}
+.tab-item {
+    cursor: pointer;
+    opacity: 0.7;
+}
+.tab-item.active {
+    opacity: 1;
+}
+.tab-item.active .tab-icon path {
+    fill: #07C160; /* 微信绿 */
+}
+/* 统一弹窗里的主要操作按钮样式 */
+.modal-action-button {
+    padding: 8px 25px; 
+    font-size: 16px;   
+    font-weight: 500;  
+    color: white;
+    background-color: #007AFF;
+    border: none;
+    border-radius: 40px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    display: inline-block; 
+    text-align: center;
+}
+/* --- 删除确认弹窗样式 --- */
+#delete-confirm-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 3000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out;
+    pointer-events: none;
+}
+
+#delete-confirm-modal.visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.delete-modal-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.4);
+}
+
+.delete-modal-content {
+    width: 270px;
+    background-color: rgba(248, 248, 248, 0.92);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: 14px;
+    text-align: center;
+    overflow: hidden;
+    transform: scale(1.1);
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+#delete-confirm-modal.visible .delete-modal-content {
+    transform: scale(1);
+}
+
+.delete-modal-text {
+    padding: 20px;
+}
+
+.delete-modal-text .title {
+    font-size: 17px;
+    font-weight: 600;
+    color: #000;
+    margin-bottom: 4px;
+}
+
+.delete-modal-text .subtitle {
+    font-size: 13px;
+    color: #3C3C43;
+}
+
+.delete-modal-actions {
+    display: flex;
+    border-top: 0.5px solid rgba(60, 60, 67, 0.36);
+}
+
+.delete-modal-actions .action-btn {
+    width: 50%;
+    padding: 12px 0;
+    font-size: 17px;
+    border: none;
+    background: none;
+    cursor: pointer;
+}
+
+.delete-modal-actions .action-btn:first-child {
+    border-right: 0.5px solid rgba(60, 60, 67, 0.36);
+}
+
+.delete-modal-actions .action-btn.destructive {
+    color: #FF3B30; /* iOS 红色 */
+    font-weight: 600;
+}
+
+.delete-modal-actions .action-btn:not(.destructive) {
+    color: #007AFF; /* iOS 蓝色 */
+}
+
+/* 顶栏布局 */
+.header {
+    position: fixed; 
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 15;
+    height: 90px; 
+    padding: 0 15px; 
+    padding-top: 45px; 
+    box-sizing: border-box;
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    font-size: 18px;
+    font-weight: 600;
+    background-color: var(--header-bg-color);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-bottom: 0.5px solid var(--header-border-color);
+    color: var(--text-primary);
+}
+
+.header .back-btn,
+.header .header-actions {
+    flex-basis: 50px; 
+    flex-shrink: 0;
+}
+
+.header .back-btn {
+    display: flex;
+    justify-content: flex-start; /* 返回按钮靠左 */
+}
+
+.header .header-actions {
+    display: flex;
+    justify-content: flex-end; /* 右侧操作按钮靠右 */
+}
+
+#chat-header-container {
+    flex-grow: 1; 
+    text-align: center; 
+    white-space: nowrap; 
+    overflow: hidden;
+    text-overflow: ellipsis; /* 标题过长时显示省略号 */
+}
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        
+        body.dark-mode #chat-interface-screen .header .back-btn svg path {
+            stroke: var(--text-primary);
+            /* 将返回箭头的线条颜色设为白色 */
+        }
+        
+        body.dark-mode #chat-interface-screen .header .action-btn svg path {
+            fill: var(--text-primary);
+            /* 将 "..." 按钮的填充颜色设为白色 */
+        }
+
+        /* 深色模式下底部操作按钮的样式 */
+        body.dark-mode .chat-action-icon-btn {
+            background-color: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        body.dark-mode #chat-input-area .chat-action-icon-btn svg path {
+            stroke: var(--text-primary);
+        }
+
+        .header .action-btn img {
+            height: 26px;
+        }
+
+        .header .save-btn {
+            font-size: 16px;
+            color: var(--accent-color);
+            font-weight: 600;
+            cursor: pointer;
+        }
+#sticker-panel {
+    position: fixed; 
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 45%; 
+    background-color: var(--action-panel-bg); 
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border-top: 0.5px solid var(--border-color);
+    border-radius: 20px 20px 0 0; 
+    z-index: 200; 
+    display: flex;
+    flex-direction: column;
+
+    transform: translateY(100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    visibility: hidden;
+}
+
+#sticker-panel.visible {
+    transform: translateY(0);
+    visibility: visible;
+}
+
+#sticker-panel-header {
+    padding: 10px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+    border-bottom: 0.5px solid var(--border-color);
+}
+
+#sticker-panel-header .title {
+    font-weight: 600;
+}
+
+#sticker-panel-header .panel-btn {
+    font-size: 16px;
+    padding: 5px 10px;
+    cursor: pointer;
+    color: var(--accent-color);
+}
+
+#sticker-grid {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 15px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 15px;
+}
+
+#chat-input-area .chat-action-icon-btn svg {
+    color: black; 
+}
+#chat-input-area .chat-action-icon-btn svg path,
+#chat-input-area .chat-action-icon-btn svg circle {
+    stroke: black; 
+    fill: none;    
+}
+
+#chat-input-area #open-sticker-panel-btn svg circle[fill="currentColor"] {
+    fill: black;
+    stroke: none;
+}
+
+
+#chat-interface-screen {
+            background-size: cover;
+            background-position: center;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        #chat-interface-screen .header .default-controls {
+            display: contents;
+        }
+
+        #chat-interface-screen .header .selection-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+
+        #chat-interface-screen.selection-mode .default-controls {
+            display: none;
+        }
+
+        #chat-interface-screen:not(.selection-mode) .selection-controls {
+            display: none;
+        }
+
+        #selection-cancel-btn,
+        #selection-edit-btn,
+        #selection-delete-btn {
+            font-size: 16px;
+            color: var(--accent-color);
+            cursor: pointer;
+            padding: 5px;
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s;
+        }
+
+        #selection-cancel-btn:active,
+        #selection-edit-btn:active,
+        #selection-delete-btn:active {
+            transform: scale(0.9);
+            opacity: 0.6;
+
+        }
+
+        #selection-delete-btn {
+            color: #ff3b30;
+        }
+
+        #chat-messages {
+            background-color: transparent;
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 10px;
+            padding-top: 90px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        #load-more-btn {
+            text-align: center;
+            padding: 10px;
+            color: var(--accent-color);
+            font-size: 14px;
+            cursor: pointer;
+            background-color: transparent;
+            border: none;
+            width: 100%;
+        }
+
+        #load-more-btn:hover {
+            text-decoration: underline;
+        }
+
+        .message-wrapper {
+            display: flex;
+            flex-direction: column;
+            max-width: 85%;
+        }
+
+        .message-wrapper.user {
+            align-self: flex-end;
+            align-items: flex-end;
+            animation: bounceInFromRight 0.4s ease-out;
+        }
+
+        .message-wrapper.ai {
+            align-self: flex-start;
+            align-items: flex-start;
+            animation: bounceInFromRight 0.4s ease-out;
+        }
+
+        .sender-name {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-bottom: 3px;
+        }
+
+        .message-wrapper.ai .sender-name {
+            margin-left: 37px;
+        }
+
+        .message-bubble {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            position: relative;
+            width: -webkit-fit-content;
+            width: -moz-fit-content;
+            width: fit-content;
+            max-width: 100%;
+        }
+
+        .message-bubble.selected::after {
+            content: '✔';
+            position: absolute;
+            left: -10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background-color: var(--accent-color);
+            color: white;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+
+        .message-bubble.user.selected::after {
+            left: auto;
+            right: -10px;
+        }
+
+        .message-bubble.user.voice-text-translation .content {
+            background-color: #ffffff;
+        }
+
+        .avatar-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0;
+            flex-shrink: 0;
+            width: 40px;
+        }
+
+        .message-bubble .avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 4px;
+            object-fit: cover;
+        }
+
+        .timestamp {
+            display: none;
+        }
+
+        .message-bubble .content {
+            padding: 7px 10px;
+            word-break: break-word;
+            line-height: 1.5;
+            font-size: 15px;
+            position: relative;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            box-shadow: none;
+            border: none;
+            transition: background-color 0.3s, color 0.3s;
+            min-height: 25px;          
+    display: flex;             
+    align-items: center;       
+        }
+
+        .message-bubble.user {
+            flex-direction: row-reverse;
+        }
+
+        #typing-indicator {
+            align-self: flex-start;
+            display: none;
+            margin: 0 10px 10px;
+            color: var(--text-secondary);
+        }
+
+        #chat-input-main-row {
+            display: flex;
+            align-items: flex-end;
+            gap: 8px;
+            width: 100%;
+        }
+
+        #chat-input {
+            background-color: var(--chat-input-bg);
+            border: var(--chat-input-border);
+            color: var(--text-primary);
+        }
+
+
+
+        .action-button {
+            border: none;
+            color: white;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        #send-btn {
+            background-color: var(--accent-color);
+            height: 40px;
+            padding: 0 15px;
+        }
+        #plus-btn {
+    display: flex;
+}
+
+
+
+/* ===== 动画效果 ===== */
+@keyframes bounceInFromLeft {
+            0% {
+                opacity: 0;
+                transform: translateX(-40px) scale(0.8);
+            }
+
+            75% {
+                opacity: 1;
+                transform: translateX(10px) scale(1.05);
+            }
+
+            100% {
+                opacity: 1;
+                transform: translateX(0) scale(1);
+            }
+        }
+
+        @keyframes bounceInFromRight {
+            0% {
+                opacity: 0;
+                transform: translateX(40px) scale(0.8);
+            }
+
+            75% {
+                opacity: 1;
+                transform: translateX(-10px) scale(1.05);
+            }
+
+            100% {
+                opacity: 1;
+                transform: translateX(0) scale(1);
+            }
+        }
+
+:root {
+            -webkit-tap-highlight-color: transparent;
+            --secondary-bg: #ffffff;
+            --border-color: #e0e0e0;
+            --text-primary: #1f1f1f;
+            --text-secondary: #8a8a8a;
+            --accent-color: #007bff;
+
+            /* 浅色模式 (默认) 颜色变量 */
+            --main-bg-color: #dcdcdc;
+            --phone-screen-bg-color: #ededed;
+            --header-bg-color: rgba(237, 237, 237, 0.85);
+            --header-border-color: #EBEBEB;
+            --chat-input-area-bg: #F6F6F6;
+            --chat-input-border: none;
+            --chat-input-bg: #FFFFFF;
+            --action-panel-bg: rgba(248, 248, 248, 0.95);
+            --action-panel-border: rgba(0, 0, 0, 0.08);
+            --action-panel-item-hover: rgba(0, 0, 0, 0.05);
+            --action-panel-divider: rgba(0, 0, 0, 0.1);
+            --modal-bg: white;
+            --modal-content-bg: white;
+            --status-bar-text-color: black;
+            --battery-fill-color: black;
+            --chat-list-bg: #efefef;
+            --chat-list-item-hover: #f5f5f5;
+            --system-message-color: #8a8a8a;
+            --home-bar-color: #000000;
+            --voice-duration-color: #000000;
+            --transfer-card-bottom-bg: #f7f7f7;
+            --transfer-card-bottom-text: #8a8a8a;
+
+            /* 聊天气泡颜色（默认） */
+            --user-bubble-bg: #95EC69;
+            --ai-bubble-bg: #ffffff;
+            --user-bubble-text: #000000;
+            --ai-bubble-text: var(--text-primary);
+        }
+
+        /* 深色模式颜色变量 */
+        body.dark-mode {
+            --main-bg-color: #1a1a1a;
+            --phone-screen-bg-color: #000000;
+            --header-bg-color: rgba(20, 20, 20, 0.85);
+            --header-border-color: #2a2a2a;
+            --chat-input-area-bg: #1c1c1c;
+            --chat-input-border: 1px solid #333;
+            --chat-input-bg: #2a2a2a;
+            --text-primary: #f0f0f0;
+            --text-secondary: #aaaaaa;
+            --border-color: #3a3a3a;
+            --accent-color: #0088ff;
+
+            --action-panel-bg: rgba(30, 30, 30, 0.95);
+            --action-panel-border: rgba(255, 255, 255, 0.1);
+            --action-panel-item-hover: rgba(255, 255, 255, 0.05);
+            --action-panel-divider: rgba(255, 255, 255, 0.1);
+            --modal-bg: #2a2a2a;
+            --modal-content-bg: #2a2a2a;
+            --status-bar-text-color: white;
+            --battery-fill-color: white;
+            --chat-list-bg: #000000;
+            --chat-list-item-hover: #1a1a1a;
+            --system-message-color: #aaaaaa;
+            --home-bar-color: #ffffff;
+            --voice-duration-color: #ffffff;
+            --transfer-card-bottom-bg: #2a2a2a;
+            --transfer-card-bottom-text: #aaaaaa;
+
+            /* 深色模式聊天气泡颜色*/
+            --user-bubble-bg: #3eb575;
+            --ai-bubble-bg: #2a2a2a;
+            --user-bubble-text: #000000;
+            --ai-bubble-text: #ffffff;
+        }
+
+/* ===== 时间戳样式 ===== */
+.system-message {
+            text-align: center;
+            color: var(--system-message-color);
+            font-size: 11px;
+            padding: 8px 0;
+            user-select: none;
+        }
+        #chat-input-area {
+            background-color: var(--chat-input-area-bg);
+            border-top: 0.5px solid var(--header-border-color);
+            backdrop-filter: none;
+            -webkit-backdrop-filter: none;
+            flex-shrink: 0;
+            padding: 8px 12px;
+            display: flex;
+            align-items: flex-end;
+            gap: 10px;
+            position: relative;
+            padding-bottom: 30px;
+            z-index: 101;
+        }
+
+        #chat-input-area::after {
+            content: '';
+            position: absolute;
+            left: 50%;
+            bottom: 8px;
+            transform: translateX(-50%);
+            width: 135px;
+            height: 5px;
+            background-color: var(--home-bar-color);
+            border-radius: 100px;
+        }
+
+        #chat-input::-webkit-scrollbar {
+            display: none;
+        }
+
+        #chat-input {
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+
+        #chat-input {
+            flex-grow: 1;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 16px;
+            line-height: 1.45;
+            max-height: 110px;
+            resize: none;
+            transition: border-color 0.2s;
+            overflow-y: auto;
+        }
+
+        #chat-input:focus {
+            outline: none;
+        }
+
+        #chat-input-area .chat-action-icon-btn {
+            width: 32px;
+            height: 32px;
+            margin-bottom: 4px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #chat-input-area .chat-action-icon-btn svg {
+            width: 26px;
+            height: 26px;
+        }
+
+        #chat-input-area #send-btn {
+            display: none;
+            background-color: #07C160;
+            color: white;
+            font-size: 15px;
+            font-weight: 500;
+            border: none;
+            border-radius: 6px;
+            padding: 0 14px;
+            height: 32px;
+            margin-bottom: 4px;
+        }
+
+        #chat-input-area #plus-btn {
+            display: flex;
+        }
+
+        #actions-panel {
+            visibility: hidden;
+            position: absolute;
+            width: auto;
+            min-width: 120px;
+            bottom: 95px;
+            right: 8px;
+            z-index: 200;
+            background-color: var(--action-panel-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 14px;
+            box-shadow: none;
+            border: 1px solid var(--action-panel-border);
+            transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s ease-out;
+            transform-origin: bottom right;
+            transform: translateY(15px) scale(0.95);
+            opacity: 0;
+            transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s ease-out, visibility 0.3s;
+        }
+
+        #actions-panel::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            right: 22px;
+            width: 0;
+            height: 0;
+            border-left: 8px solid transparent;
+            border-right: 8px solid transparent;
+            border-top: 8px solid var(--action-panel-bg);
+        }
+        body.dark-mode #actions-panel::after {
+            border-top-color: var(--action-panel-bg);
+        }
+
+        #actions-panel.visible {
+            visibility: visible;
+            transform: translateY(0) scale(1);
+            opacity: 1;
+        }
+        .action-grid {
+            display: flex;
+            flex-direction: column;
+            padding: 5px;
+        }
+
+        .action-item {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            padding: 12px 12px;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.2s;
+            position: relative;
+            white-space: nowrap;
+        }
+
+        .action-item:not(:last-child)::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 12px;
+            right: 12px;
+            height: 1px;
+            background-color: var(--action-panel-divider);
+            transform: scaleY(0.5);
+        }
+
+        .action-item:hover {
+            background-color: var(--action-panel-item-hover);
+            border-radius: 8px;
+        }
+
+        .action-label {
+            font-size: 15px;
+            color: var(--text-primary);
+            margin-right: 0;
+        }
+
+        .action-icon-background {
+            width: 30px;
+            height: 30px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .action-item .icon {
+            width: 24px;
+            height: 24px;
+            fill: var(--text-primary);
+        }
+
+        .timestamp-bg {
+    background-color: rgba(0, 0, 0, 0.08);
+    color: var(--system-message-color);
+    padding: 3px 9px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 500;
+
+    /* 高斯模糊效果 */
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+/* 深色模式下的背景色 */
+body.dark-mode .timestamp-bg {
+    background-color: rgba(255, 255, 255, 0.12);
+}
+    </style>
+</head>
+
+<body>
+    <div id="status-bar">
+        <span id="status-bar-time">00:00</span>
+        <div id="status-bar-right-icons">
+            <svg class="status-bar-svg-icon" width="20" height="13" viewBox="-1 -1 22 15" fill="none"
+                xmlns="http://www.w3.org/2000/svg">
+                <path fill-rule="evenodd" clip-rule="evenodd"
+                    d="M18.8186 0.749817H17.6519C17.0076 0.749817 16.4852 1.2535 16.4852 1.87482V11.6248C16.4852 12.2461 17.0076 12.7498 17.6519 12.7498H18.8186C19.4629 12.7498 19.9852 12.2461 19.9852 11.6248V1.87482C19.9852 1.2535 19.4629 0.749817 18.8186 0.749817ZM12.1617 3.37495H13.3284C13.9727 3.37495 14.495 3.87863 14.495 4.49995V11.625C14.495 12.2463 13.9727 12.75 13.3284 12.75H12.1617C11.5174 12.75 10.995 12.2463 10.995 11.625V4.49995C10.995 3.87863 11.5174 3.37495 12.1617 3.37495ZM7.83818 5.99974H6.67151C6.02718 5.99974 5.50484 6.50342 5.50484 7.12474V11.6247C5.50484 12.2461 6.02718 12.7497 6.67151 12.7497H7.83818C8.48251 12.7497 9.00484 12.2461 9.00484 11.6247V7.12474C9.00484 6.50342 8.48251 5.99974 7.83818 5.99974ZM2.34798 8.2497H1.18132C0.536983 8.2497 0.0146484 8.75338 0.0146484 9.3747V11.6247C0.0146484 12.246 0.536983 12.7497 1.18132 12.7497H2.34798C2.99231 12.7497 3.51465 12.246 3.51465 11.6247V9.3747C3.51465 8.75338 2.99231 8.2497 2.34798 8.2497Z">
+                </path>
+            </svg>
+            <svg class="status-bar-svg-icon" viewBox="0 0 18 13" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path fill-rule="evenodd" clip-rule="evenodd"
+                    d="M9.00047 2.59599C11.467 2.5961 13.8393 3.56668 15.6269 5.30712C15.7615 5.44149 15.9766 5.43979 16.1092 5.30332L17.396 3.9734C17.4631 3.90418 17.5006 3.81042 17.5 3.71287C17.4994 3.61531 17.4609 3.52201 17.393 3.4536C12.7011 -1.1512 5.29908 -1.1512 0.607163 3.4536C0.539197 3.52196 0.500634 3.61523 0.500008 3.71279C0.499381 3.81034 0.536742 3.90413 0.603824 3.9734L1.89096 5.30332C2.02346 5.44 2.23878 5.4417 2.37331 5.30712C4.16116 3.56656 6.53367 2.59598 9.00047 2.59599ZM9.00045 6.92266C10.3557 6.92257 11.6625 7.43843 12.6671 8.36999C12.8029 8.5022 13.017 8.49933 13.1494 8.36353L14.4347 7.03361C14.5024 6.96386 14.5399 6.86922 14.539 6.77089C14.538 6.67255 14.4986 6.57872 14.4295 6.51039C11.3704 3.59629 6.63306 3.59629 3.57399 6.51039C3.50489 6.57872 3.46546 6.6726 3.46455 6.77097C3.46365 6.86933 3.50133 6.96396 3.56916 7.03361L4.85407 8.36353C4.98652 8.49933 5.20056 8.5022 5.33643 8.36999C6.34032 7.43905 7.64613 6.92323 9.00045 6.92266ZM11.5751 9.83398C11.5771 9.93259 11.5392 10.0277 11.4705 10.0968L9.24719 12.3945C9.18201 12.462 9.09316 12.5 9.00045 12.5C8.90773 12.5 8.81888 12.462 8.7537 12.3945L6.53006 10.0968C6.46137 10.0276 6.42358 9.93251 6.42562 9.8339C6.42765 9.73529 6.46933 9.64191 6.54082 9.57581C7.96068 8.34595 10.0402 8.34595 11.4601 9.57581C11.5315 9.64196 11.5731 9.73537 11.5751 9.83398Z">
+                </path>
+            </svg>
+            <div id="status-bar-battery" class="battery-container">
+                <div id="battery-normal-wrapper">
+                    <svg width="28" height="13" viewBox="0 0 28 13" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect class="battery-frame" opacity="0.4" x="1.17004" y="0.5" width="24" height="12" rx="3.5">
+                        </rect>
+                        <path class="battery-terminal" opacity="0.5"
+                            d="M26.67 4.5V8.5C27.476 8.16122 28 7.37313 28 6.5C28 5.62687 27.476 4.83878 26.67 4.5Z">
+                        </path>
+                        <rect class="battery-fill" id="battery-normal-fill" x="2.17004" y="2" width="22" height="9"
+                            rx="2"></rect>
+                    </svg>
+                </div>
+                <div id="battery-charging-wrapper" style="display: none;">
+                    <svg width="28" height="13" viewBox="0 0 28 13" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect class="battery-fill" id="battery-charging-fill" x="2.17004" y="2" width="22" height="9"
+                            rx="2"></rect>
+                        <rect class="battery-frame" opacity="0.4" x="1.17004" y="0.5" width="24" height="12" rx="3.5">
+                        </rect>
+                        <path class="battery-terminal" opacity="0.5"
+                            d="M26.67 4.5V8.5C27.476 8.16122 28 7.37313 28 6.5C28 5.62687 27.476 4.83878 26.67 4.5Z">
+                        </path>
+                        <g class="battery-charging-indicator">
+                            <path d="M6.33333 5.5L4.66667 8.5H7.66667L6 11.5" stroke="white" stroke-width="1.2"
+                                stroke-linecap="round" stroke-linejoin="round" />
+                        </g>
+                    </svg>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="dynamic-island">
+        <div class="di-content">
+            <div class="di-icon"></div>
+            <div class="di-text">
+                <span class="di-title"></span>
+                <span class="di-detail"></span>
+            </div>
+        </div>
+    </div>
+
+    <div id="home-screen" class="screen active">
+        <div class="page-container">
+            <div class="search">
+                <div class="content">
+                    <svg class="SF-symbol" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path
+                            d="M7.33333 12.6667C10.2789 12.6667 12.6667 10.2789 12.6667 7.33333C12.6667 4.38781 10.2789 2 7.33333 2C4.38781 2 2 4.38781 2 7.33333C2 10.2789 4.38781 12.6667 7.33333 12.6667Z"
+                            stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                        <path d="M14.0001 14L11.1001 11.1" stroke="white" stroke-width="1.5" stroke-linecap="round"
+                            stroke-linejoin="round" />
+                    </svg>
+                    <span class="div">7%</span>
+                </div>
+            </div>
+            <div class="dock-container">
+                <div class="app-icon" onclick="openApp('wechat-screen', this)"><img src="https://youke1.picui.cn/s1/2025/07/29/68886619a9aa2.png" alt="微信"></div>
+                <div class="app-icon" onclick="openApp('settings-screen', this)"><img
+                        src="https://youke1.picui.cn/s1/2025/07/29/68886b45e4313.png" alt="设置"></div>
+                <div class="app-icon"><img src="https://youke1.picui.cn/s1/2025/07/29/68886bbac1662.png" alt="备忘录">
+                </div>
+                <div class="app-icon"><img src="https://youke1.picui.cn/s1/2025/07/29/68886cac3bf4d.png" alt="线下"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="settings-screen" class="screen">
+        <div class="settings-nav">
+            <div class="settings-back-bar" onclick="showScreen('home-screen')">&lt; Home</div>
+            <div class="settings-header">
+                <h1>Settings</h1>
+            </div>
+            <div class="settings-search-container">
+                <div class="settings-search-bar"><span class="placeholder">Search</span></div>
+            </div>
+        </div>
+        <div class="settings-content">
+            <div class="settings-group">
+                <div class="profile-card">
+                    <div class="avatar-container"><img class="profile-avatar"
+                            src="https://youke1.picui.cn/s1/2025/07/29/68888a5033a94.png" alt="Avatar"></div>
+                    <div class="info">
+                        <div class="name">7%</div>
+                        <div class="details">@xhs</div>
+                    </div>
+                    <svg class="chevron" width="8" height="13" viewBox="0 0 8 13" fill="none"
+                        xmlns="http://www.w3.org/2000/svg">
+                        <path
+                            d="M8.00003 6.49658C8.00003 6.21603 7.89739 5.98337 7.67842 5.76441L2.40952 0.61183C2.23161 0.433919 2.01949 0.351807 1.7663 0.351807C1.2531 0.351807 0.835693 0.755528 0.835693 1.26873C0.835693 1.52191 0.945177 1.75457 1.12993 1.93932L5.81036 6.48974L1.12993 11.0538C0.945177 11.2386 0.835693 11.4644 0.835693 11.7244C0.835693 12.2376 1.2531 12.6482 1.7663 12.6482C2.01949 12.6482 2.23161 12.5592 2.40952 12.3813L7.67842 7.22875C7.90423 7.00978 8.00003 6.77713 8.00003 6.49658Z" />
+                    </svg>
+                </div>
+            </div>
+            <div class="settings-group">
+                <div class="settings-item">
+                    <div class="icon-bg" style="background-color: #FF9500;"><svg width="18" height="18"
+                            viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path
+                                d="M1.5 9C1.5 13.1423 4.85775 16.5 9 16.5C12.654 16.5 15.6975 13.887 16.3642 10.4276C16.014 10.4756 15.6585 10.5 15.3 10.5C10.992 10.5 7.5 7.008 7.5 2.7C7.5 2.3415 7.52437 1.986 7.57237 1.63575C4.113 2.30212 1.5 5.346 1.5 9ZM9 0C9.20063 0 9.39975 0.009 9.59775 0.02175C9.20333 0.85946 8.9992 1.77408 9 2.7C9 6.17925 11.8207 9 15.3 9C16.2259 9.0007 17.1405 8.79658 17.9783 8.40225C17.991 8.60025 18 8.79937 18 9C18 13.9706 13.9706 18 9 18C4.02938 18 0 13.9706 0 9C0 4.02938 4.02938 0 9 0ZM16.5 3C16.1022 3 15.7206 2.84196 15.4393 2.56066C15.158 2.27936 15 1.89782 15 1.5C15 1.10218 15.158 0.720644 15.4393 0.43934C15.7206 0.158035 16.1022 0 16.5 0C16.8978 0 17.2794 0.158035 17.5607 0.43934C17.842 0.720644 18 1.10218 18 1.5C18 1.89782 17.842 2.27936 17.5607 2.56066C17.2794 2.84196 16.8978 3 16.5 3Z"
+                                fill="white" />
+                        </svg></div>
+                    <div class="settings-item-content">
+                        <span class="label">Dark Mode</span>
+                        <div id="dark-mode-toggle" class="toggle-switch">
+                            <div class="track"></div>
+                            <div class="thumb"></div>
+                        </div>
+                    </div>
+                </div>
+                <div id="api-settings-trigger" class="settings-item">
+                    <div class="icon-bg" style="background-color: #007AFF;"><svg width="18" height="18"
+                            viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path
+                                d="M16.0048 3.75355C14.1356 1.44505 10.7488 1.08899 8.43974 2.95874L6.66843 4.39312L7.55324 5.48605L9.32455 4.05168C9.72998 3.72337 10.1961 3.47813 10.6963 3.32996C11.1965 3.1818 11.721 3.1336 12.2398 3.18813C12.7587 3.24267 13.2617 3.39885 13.7201 3.64778C14.1786 3.89671 14.5836 4.2335 14.9119 4.63893C15.2402 5.04436 15.4854 5.51048 15.6336 6.01068C15.7817 6.51089 15.8299 7.03538 15.7754 7.55421C15.7209 8.07304 15.5647 8.57605 15.3158 9.03452C15.0668 9.49298 14.73 9.89793 14.3246 10.2262L12.4267 11.763L13.3116 12.8559L15.2094 11.3192C15.7585 10.8747 16.2146 10.3264 16.5517 9.70559C16.8888 9.0848 17.1004 8.40367 17.1742 7.70112C17.2481 6.99856 17.1828 6.28834 16.9822 5.61101C16.7815 4.93368 16.4494 4.30252 16.0048 3.75355ZM9.07649 14.4765C8.67106 14.8048 8.20494 15.05 7.70474 15.1982C7.20453 15.3464 6.68004 15.3946 6.16121 15.34C5.64238 15.2855 5.13937 15.1293 4.6809 14.8804C4.22244 14.6315 3.81749 14.2947 3.48918 13.8892C3.16087 13.4838 2.91563 13.0177 2.76746 12.5175C2.6193 12.0173 2.5711 11.4928 2.62563 10.974C2.68016 10.4551 2.83635 9.95212 3.08528 9.49366C3.33421 9.03519 3.671 8.63024 4.07643 8.30193L6.02718 6.72243L5.14237 5.62949L3.19162 7.20899C0.883115 9.07818 0.527053 12.4656 2.39624 14.7741C4.26543 17.0826 7.6528 17.4386 9.9613 15.5694L11.8091 14.0732L10.9243 12.9802L9.07649 14.4765Z"
+                                fill="white" />
+                            <path d="M11.8856 6.20999L12.7862 7.28999L6.74717 12.3227L5.84717 11.2427L11.8856 6.20999Z"
+                                fill="white" />
+                        </svg></div>
+                    <div class="settings-item-content">
+                        <span class="label">API Settings</span>
+                        <span class="value">not yet</span>
+                        <svg class="chevron" width="8" height="13" viewBox="0 0 8 13" fill="none"
+                            xmlns="http://www.w3.org/2000/svg">
+                            <path
+                                d="M8.00003 6.49658C8.00003 6.21603 7.89739 5.98337 7.67842 5.76441L2.40952 0.61183C2.23161 0.433919 2.01949 0.351807 1.7663 0.351807C1.2531 0.351807 0.835693 0.755528 0.835693 1.26873C0.835693 1.52191 0.945177 1.75457 1.12993 1.93932L5.81036 6.48974L1.12993 11.0538C0.945177 11.2386 0.835693 11.4644 0.835693 11.7244C0.835693 12.2376 1.2531 12.6482 1.7663 12.6482C2.01949 12.6482 2.23161 12.5592 2.40952 12.3813L7.67842 7.22875C7.90423 7.00978 8.00003 6.77713 8.00003 6.49658Z" />
+                        </svg>
+                    </div>
+                </div>
+                <div id="wallpaper-settings-trigger" class="settings-item">
+                    <div class="icon-bg" style="background-color: #34C759;"><svg width="20" height="19"
+                            viewBox="0 0 20 19" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path
+                                d="M15.2441 18.9554C15.0938 18.9554 14.943 18.919 14.8047 18.8453L9.7823 16.1689L4.75984 18.8453C4.44184 19.0152 4.05584 18.9866 3.76518 18.7725C3.47423 18.5583 3.32867 18.1952 3.38943 17.836L4.34848 12.167L0.285237 8.15197C0.0278116 7.89765 -0.0648455 7.5171 0.0462591 7.17048C0.157404 6.82385 0.452983 6.5713 0.808762 6.5188L6.4241 5.69158L8.93523 0.533678C9.09442 0.20686 9.42274 0 9.78232 0C10.1419 0 10.4702 0.20686 10.6294 0.533678L13.1405 5.69158L18.7558 6.5188C19.1116 6.5713 19.4072 6.82393 19.5183 7.17048C19.6294 7.5171 19.5368 7.89765 19.2794 8.15197L15.2161 12.167L16.1751 17.836C16.2359 18.1953 16.0903 18.5583 15.7994 18.7725C15.6349 18.8937 15.4399 18.9554 15.2441 18.9554ZM9.78234 14.7972C9.96312 14.7972 10.1438 14.8408 10.3084 14.9281L14.8187 17.3174L13.9575 12.2565C13.8945 11.8869 14.0161 11.5099 14.2826 11.2482L17.9317 7.66386L12.8888 6.92556C12.5205 6.87168 12.4763 7.11673 12.339 6.83652L9.78228 1.69781L7.52725 6.30233C7.36242 6.63856 7.04409 6.87166 6.6758 6.92554L1.63292 7.66392L5.28197 11.2482C5.54849 11.5099 5.67013 11.887 5.60709 12.2566L4.74587 17.3174L9.25615 14.9281C9.42084 14.8408 9.60156 14.7972 9.78234 14.7972Z"
+                                fill="white" />
+                        </svg></div>
+                    <div class="settings-item-content">
+                        <span class="label">Wallpaper</span>
+                        <span class="value">default</span>
+                        <svg class="chevron" width="8" height="13" viewBox="0 0 8 13" fill="none"
+                            xmlns="http://www.w3.org/2000/svg">
+                            <path
+                                d="M8.00003 6.49658C8.00003 6.21603 7.89739 5.98337 7.67842 5.76441L2.40952 0.61183C2.23161 0.433919 2.01949 0.351807 1.7663 0.351807C1.2531 0.351807 0.835693 0.755528 0.835693 1.26873C0.835693 1.52191 0.945177 1.75457 1.12993 1.93932L5.81036 6.48974L1.12993 11.0538C0.945177 11.2386 0.835693 11.4644 0.835693 11.7244C0.835693 12.2376 1.2531 12.6482 1.7663 12.6482C2.01949 12.6482 2.23161 12.5592 2.40952 12.3813L7.67842 7.22875C7.90423 7.00978 8.00003 6.77713 8.00003 6.49658Z" />
+                        </svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- 微信对话列表屏幕-->
+<div id="wechat-screen" class="screen">
+    <!-- 微信顶栏 -->
+    <div class="wechat-header">
+        <div class="header-icon" onclick="showScreen('home-screen')" style="cursor: pointer;">
+            <svg width="12" height="21" viewBox="0 0 12 21" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M10.5355 1.46448C11.1213 2.05026 11.1213 3.00001 10.5355 3.58579L3.12132 11L10.5355 18.4142C11.1213 18.9999 11.1213 19.95 10.5355 20.5355C9.94975 21.1213 9 21.1213 8.41421 20.5355L0.414214 12.5355C-0.171573 11.9497 -0.171573 11.0001 0.414214 10.4142L8.41421 2.41421C9 -1.42109e-06 9.94975 -1.42109e-06 10.5355 1.46448Z" fill="black"/>
+            </svg>
+        </div>
+        <span class="header-title">微信</span>
+        <div class="header-icon" id="open-char-creator-btn">
+            <svg width="22" height="22" viewBox="0 0 55 55" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M27.5 0.5C28.7371 0.500025 29.7402 1.50315 29.7402 2.74023V25.2598H52.2598C53.4968 25.2598 54.5 26.2629 54.5 27.5C54.5 28.7371 53.4969 29.7402 52.2598 29.7402H29.7402V52.2598C29.7402 53.4968 28.7371 54.5 27.5 54.5C26.2629 54.5 25.2598 53.4969 25.2598 52.2598V29.7402H2.74023C1.50314 29.7402 0.5 28.7371 0.5 27.5C0.500024 26.2629 1.50315 25.2598 2.74023 25.2598H25.2598V2.74023C25.2598 1.50314 26.2629 0.5 27.5 0.5Z" fill="black"/>
+            </svg>
+        </div>
+    </div>
+    <!-- 聊天列表内容区 -->
+    <div class="wechat-content">
+    </div>
+    <!-- 微信底栏 -->
+    <div class="wechat-tab-bar">
+        <div class="tab-item active">
+            <svg class="tab-icon" width="30" height="30" viewBox="0 0 85 85" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <g clip-path="url(#clip0_29_928)"><path d="M5.75881 79.4835L23.6386 75.82L24.9731 76.5085C30.3913 79.3058 36.4023 80.7605 42.5001 80.75C50.0652 80.75 57.4604 78.5067 63.7506 74.3037C70.0408 70.1007 74.9434 64.1269 77.8385 57.1376C80.7335 50.1484 81.491 42.4576 80.0151 35.0378C78.5392 27.618 74.8963 20.8025 69.5469 15.4532C64.1975 10.1038 57.382 6.46085 49.9623 4.98496C42.5425 3.50908 34.8517 4.26656 27.8624 7.16161C20.8731 10.0567 14.8993 14.9593 10.6963 21.2494C6.49338 27.5396 4.25006 34.9349 4.25006 42.5C4.25006 49.1512 5.95006 55.5475 9.13331 61.2127L9.95781 62.6875L5.75881 79.4835ZM6.61306 83.6485C5.90911 83.7922 5.18022 83.7551 4.49449 83.5407C3.80877 83.3263 3.1886 82.9415 2.69194 82.4223C2.19528 81.9032 1.83834 81.2666 1.65447 80.572C1.47061 79.8775 1.46582 79.1476 1.64056 78.4508L5.42306 63.2953C1.85569 56.9458 -0.0122376 49.783 6.03337e-05 42.5C6.03337e-05 19.0273 19.0273 0 42.5001 0C65.9728 0 85.0001 19.0273 85.0001 42.5C85.0001 65.9727 65.9728 85 42.5001 85C35.4791 85 28.8576 83.3 23.0223 80.2825L6.61731 83.6442L6.61306 83.6485Z" fill="black"/></g><defs><clipPath id="clip0_29_928"><rect width="85" height="85" fill="white"/></clipPath></defs>
+            </svg>
+        </div>
+        <div class="tab-item">
+            <svg class="tab-icon" width="34" height="34" viewBox="0 0 97 93" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M74.3899 92.215C73.5449 92.215 72.6999 92.02 71.9199 91.565L48.8449 79.41C48.4549 79.215 47.9349 79.215 47.5449 79.41L24.4699 91.565C22.6499 92.54 20.5049 92.345 18.8799 91.175C17.2549 90.005 16.4099 87.99 16.7349 85.975L21.1549 60.3C21.2199 59.845 21.0899 59.39 20.7649 59.065L2.0449 40.8C0.549902 39.37 0.0949024 37.29 0.679902 35.34C1.3299 33.39 2.9549 32.025 4.9699 31.7L30.7749 27.93C31.2299 27.865 31.6199 27.54 31.8799 27.15L43.4499 3.75001C44.3599 1.93001 46.1799 0.76001 48.2599 0.76001C50.2749 0.76001 52.1599 1.93001 53.0699 3.75001L64.6399 27.15C64.8349 27.54 65.2249 27.865 65.7449 27.93L91.5499 31.7C93.5649 32.025 95.1899 33.39 95.8399 35.34C96.4899 37.29 95.9699 39.37 94.4749 40.8L75.8199 59C75.4949 59.325 75.2999 59.78 75.4299 60.235L79.8499 85.91C80.1749 87.925 79.3949 89.94 77.7049 91.11C76.5999 91.89 75.4949 92.215 74.3899 92.215ZM48.1949 75.38C49.0399 75.38 49.8849 75.575 50.6649 75.965L73.7399 88.12C74.4549 88.51 75.0399 88.185 75.2349 87.99C75.4299 87.795 75.9499 87.405 75.8199 86.56L71.3999 60.95C71.0749 59.195 71.6599 57.44 72.9599 56.205L91.6149 38.005C92.1999 37.42 92.0699 36.77 92.0049 36.51C91.9399 36.25 91.6149 35.665 90.8349 35.535L65.0299 31.765C63.2749 31.505 61.7799 30.4 60.9999 28.84L49.4299 5.44001C49.1049 4.72501 48.3899 4.66001 48.1299 4.66001C47.8699 4.66001 47.2199 4.72501 46.8299 5.44001L35.2599 28.84C34.4799 30.4 32.9849 31.505 31.2299 31.765L5.5549 35.6C4.7749 35.73 4.5149 36.315 4.3849 36.575C4.3199 36.835 4.1899 37.485 4.7749 38.07L23.4299 56.27C24.6649 57.505 25.2499 59.26 24.9899 61.015L20.5699 86.69C20.4399 87.47 20.8949 87.925 21.1549 88.12C21.4149 88.315 21.9349 88.575 22.6499 88.25L45.7249 76.095C46.5049 75.64 47.3499 75.38 48.1949 75.38Z" fill="black"/>
+            </svg>
+        </div>
+    </div>
+</div>
+ <!-- 对话列表创建新角色 -->
+<div id="create-character-screen" class="modal-container">
+    <div class="modal-overlay"></div>
+    <div class="modal-content" style="background-color: #F9F9F9; border-radius: 25px; max-width: 420px; padding: 15px 25px 30px;">
+        
+        <div class="modal-handle"></div>
+        <h3 style="font-weight: 600; font-size: 18px; margin-bottom: 15px;">新朋友</h3>
+
+        <div class="avatar-section">
+            <img src="" class="char-avatar">
+            <span class="upload-avatar-text">上传头像</span>
+        </div>
+
+        <div class="char-form">
+            <input type="text" class="char-input" placeholder="姓名">
+            <textarea class="char-textarea" placeholder="键入ta的人设"></textarea>
+            <input type="text" class="char-input" placeholder="上下文记忆">
+
+            
+
+
+            <div class="char-action-buttons">
+                 <div class="action-button" title="上传背景 (暂未实现)">
+                    <svg width="35" height="35" viewBox="0 0 35 35" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M29.8528 16.4706C29.8528 15.9245 30.0697 15.4009 30.4558 15.0148C30.8419 14.6287 31.3656 14.4117 31.9117 14.4117C32.4577 14.4117 32.9814 14.6287 33.3675 15.0148C33.7536 15.4009 33.9705 15.9245 33.9705 16.4706V26.1594C33.9705 31.0388 30.0422 35 25.1855 35H9.8143C4.95753 35 1.0293 31.0388 1.0293 26.1594V16.4706C1.0293 15.9245 1.24621 15.4009 1.63231 15.0148C2.01842 14.6287 2.54209 14.4117 3.08812 14.4117C3.63415 14.4117 4.15782 14.6287 4.54393 15.0148C4.93003 15.4009 5.14694 15.9245 5.14694 16.4706V26.1594C5.14694 28.772 7.24077 30.8823 9.8143 30.8823H25.1855C27.759 30.8823 29.8528 28.772 29.8528 26.1594V16.4706Z" fill="#007AFF"></path><path d="M17.5 2.05884C18.8725 2.05884 19.5588 2.74511 19.5588 4.11766V24.7059C19.5588 26.0784 18.8725 26.7647 17.5 26.7647C16.1274 26.7647 15.4412 26.0784 15.4412 24.7059V4.11766C15.4412 2.74511 16.1274 2.05884 17.5 2.05884Z" fill="#007AFF"></path><path d="M17.3971 5.82234L11.5707 11.6468C11.1824 12.0218 10.6623 12.2293 10.1225 12.2246C9.58266 12.2199 9.06628 12.0034 8.68456 11.6217C8.30284 11.24 8.08631 10.7236 8.08162 10.1838C8.07693 9.64394 8.28445 9.12388 8.65948 8.73558L15.9415 1.45558C16.3276 1.06961 16.8512 0.852783 17.3971 0.852783C17.9431 0.852783 18.4666 1.06961 18.8527 1.45558L26.1307 8.73558C26.3273 8.9255 26.4841 9.15268 26.592 9.40386C26.6999 9.65505 26.7567 9.92521 26.7591 10.1986C26.7615 10.4719 26.7094 10.743 26.6059 10.9961C26.5024 11.2491 26.3495 11.479 26.1562 11.6723C25.9629 11.8656 25.733 12.0185 25.48 12.122C25.227 12.2255 24.9558 12.2776 24.6825 12.2752C24.4091 12.2728 24.139 12.216 23.8878 12.1081C23.6366 12.0002 23.4094 11.8434 23.2195 11.6468L17.3971 5.82234Z" fill="#007AFF"></path></svg>
+                </div>
+                <div class="action-button" title="恢复默认">
+<svg width="27" height="27" viewBox="0 0 27 27" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M0.199951 13.5C0.199951 17.0274 1.6012 20.4103 4.09543 22.9045C6.58967 25.3988 9.97257 26.8 13.5 26.8C17.0273 26.8 20.4102 25.3988 22.9045 22.9045C25.3987 20.4103 26.8 17.0274 26.8 13.5C26.8 9.97263 25.3987 6.58973 22.9045 4.09549C20.4102 1.60126 17.0273 0.200012 13.5 0.200012C9.97257 0.200012 6.58967 1.60126 4.09543 4.09549C1.6012 6.58973 0.199951 9.97263 0.199951 13.5Z" fill="#3889FF"></path>
+    <path d="M19.1687 15.6313C18.1125 17.95 15.9875 19.55 13.5 19.55C10.2 19.55 7.5125 16.8625 7.5125 13.55C7.5125 10.2375 10.2 7.55 13.5 7.55C15.025 7.55 16.4 8.1125 17.425 9.05L15.65 10.825H20.45V6.025L18.7375 7.7375C17.3875 6.4625 15.55 5.6 13.5 5.6C9.1375 5.6 5.5625 9.175 5.5625 13.55C5.5625 17.925 9.1375 21.5 13.5 21.5C16.5125 21.5 19.1 19.7 20.1812 17.1L19.1687 15.6313Z" fill="white"></path>
+</svg>
+                </div>
+            </div>
+<button class="save-char-button modal-action-button">保存</button>
+        </div>
+    </div>
+</div>
+ <!-- 聊天界面 -->
+<div id="chat-interface-screen" class="screen">
+    <div class="header">
+        <div class="default-controls">
+            <span class="back-btn" id="back-to-list-btn">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+                    xmlns="http://www.w3.org/2000/svg">
+                    <path d="M15 18L9 12L15 6" stroke="#1c1c1c" stroke-width="1.5" stroke-linecap="round"
+                        stroke-linejoin="round" />
+                </svg>
+            </span>
+            <div id="chat-header-container">
+                <span id="chat-header-title">聊天对象</span>
+                <div id="chat-subtitle" style="display: none;">
+                    <div id="online-indicator"></div>
+                    <span id="status-text">在线</span>
+                </div>
+            </div>
+            <div class="header-actions">
+                <span class="action-btn" id="chat-settings-btn" title="聊天设置">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        xmlns="http://www.w3.org/2000/svg">
+                        <path
+                            d="M5 12C5 13.1046 4.10457 14 3 14C1.89543 14 1 13.1046 1 12C1 10.8954 1.89543 10 3 10C4.10457 10 5 10.8954 5 12Z"
+                            fill="#1c1c1c" />
+                        <path
+                            d="M13 12C13 13.1046 12.1046 14 11 14C9.89543 14 9 13.1046 9 12C9 10.8954 9.89543 10 11 10C12.1046 10 13 10.8954 13 12Z"
+                            fill="#1c1c1c" />
+                        <path
+                            d="M21 12C21 13.1046 20.1046 14 19 14C17.8954 14 17 13.1046 17 12C17 10.8954 17.8954 10 19 10C20.1046 10 21 10.8954 21 12Z"
+                            fill="#1c1c1c" />
+                    </svg>
+                </span>
+            </div>
+        </div>
+
+        <div class="selection-controls">
+            <span id="selection-cancel-btn">取消</span>
+            <span id="selection-count"></span>
+            <div style="display: flex; align-items: center; gap: 20px;">
+                <span id="selection-favorite-btn">收藏</span> <span id="selection-edit-btn">编辑</span>
+                <span id="selection-delete-btn">删除</span>
+            </div>
+        </div>
+        <div id="send-status-subtitle"></div>
+    </div>
+
+    <div id="chat-input-area">
+        <button id="voice-message-btn" class="chat-action-icon-btn action-button" title="发送语音">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 2C15.3137 2 18 4.68629 18 8V12C18 15.3137 15.3137 18 12 18C8.68629 18 6 15.3137 6 12V8C6 4.68629 8.68629 2 12 2Z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M20 12V13C20 17.4183 16.4183 21 12 21C7.58172 21 4 17.4183 4 13V12" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M12 21V22" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </button>
+
+        <textarea id="chat-input" rows="1"></textarea>
+
+        <button id="open-sticker-panel-btn" class="chat-action-icon-btn action-button" title="表情面板">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="12" r="10" stroke-width="1.5"/>
+                <circle cx="9" cy="10" r="1" fill="currentColor" stroke="none"/>
+                <circle cx="15" cy="10" r="1" fill="currentColor" stroke="none"/>
+                <path d="M16 14.5C15.4682 15.5422 14.3213 16.5 12 16.5C9.67872 16.5 8.53181 15.5422 8 14.5" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+        </button>
+
+        <button id="plus-btn" class="chat-action-icon-btn action-button" title="更多功能">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="12" r="10" stroke-width="1.5"/>
+                <path d="M12 8V16" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M8 12H16" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </button>
+        <button id="send-btn" class="action-button">发送</button>
+    </div>
+    <div id="actions-panel">
+        <div class="action-grid">
+            <div class="action-item" id="action-photo">
+                <span class="action-label">照片</span>
+                <div class="action-icon-background">
+                    <svg t="1753605732063" class="icon" viewBox="0 0 1024 1024" version="1.1"
+                        xmlns="http://www.w3.org/2000/svg" p-id="5622">
+                        <path
+                            d="M336.384 403.456L56.32 697.344 74.24 834.56h871.424l15.36-69.632L727.552 560.64 601.088 714.752l2.048 21.504-9.216-12.288c0.512-0.512-257.536-320.512-257.536-320.512z"
+                            p-id="5623"></path>
+                        <path
+                            d="M935.424 229.376H88.576c-20.48 0-37.376 15.872-37.376 35.328v563.712c0 19.456 16.896 35.328 37.376 35.328h846.336c20.48 0 37.376-15.872 37.376-35.328V264.704c0.512-19.456-16.384-35.328-36.864-35.328zM923.648 821.76H100.352V271.872h823.296V821.76z">
+                        </path>
+                    </svg>
+                </div>
+
+            </div>
+            <div class="action-item" id="action-transfer">
+                <span class="action-label">转账</span>
+                <div class="action-icon-background">
+                    <svg t="1753605788000" class="icon" viewBox="0 0 1109 1024" version="1.1"
+                        xmlns="http://www.w3.org/2000/svg" p-id="6673">
+                        <path
+                            d="M391.183105 392.073178H42.628017a18.472141 18.472141 0 0 1-14.209339-30.976359l330.651321-355.233477a18.472141 18.472141 0 0 1 31.971013 12.646311v227.349426a18.472141 18.472141 0 0 0 18.472141 18.330047H1089.856308a18.614234 18.614234 0 0 1 18.472141 18.472141v90.93977a18.472141 18.472141 0 0 1-18.472141 18.472141H391.183105z m325.962239 239.853644H1065.700432a18.472141 18.472141 0 0 1 14.209339 30.976359l-330.367134 355.233477a18.472141 18.472141 0 0 1-31.971013-12.646311V778.851388a18.472141 18.472141 0 0 0-18.472141-18.472141H18.472141a18.472141 18.472141 0 0 1-18.472141-18.472141v-91.650237a18.472141 18.472141 0 0 1 18.472141-18.47214h698.673203z">
+                        </path>
+                    </svg>
+                </div>
+
+            </div>
+            <div class="action-item" id="action-time">
+                <span class="action-label">时间</span>
+                <div class="action-icon-background">
+                    <svg t="1753605834885" class="icon" viewBox="0 0 1024 1024" version="1.1"
+                        xmlns="http://www.w3.org/2000/svg" p-id="7701">
+                        <path
+                            d="M869.577978 67.538209 152.466484 67.538209c-47.764863 0-86.654592 38.889729-86.654592 86.654592l0 457.564203c0 47.76998 38.889729 86.653569 86.654592 86.653569l110.571305 0 2.305509 231.359298 237.20954-231.359298 367.025141 0c47.76384 0 86.654592-38.883589 86.654592-86.653569L956.23257 154.192801C956.23257 106.427938 917.341818 67.538209 869.577978 67.538209zM775.330454 478.187917c0 16.389272-13.286608 29.67588-29.67588 29.67588l-316.201615 0-5.116531 0-17.396205 0c-10.737552 0-19.442818-8.705266-19.442818-19.442818L387.497405 206.840882c0-10.737552 8.705266-19.442818 19.442818-19.442818l22.512736 0c10.737552 0 19.442818 8.705266 19.442818 19.442818l0 236.383732 296.758798 0c16.389272 0 29.67588 13.286608 29.67588 29.67588L775.330454 478.187917z">
+                        </path>
+                    </svg>
+                </div>
+
+            </div>
+            <div class="action-item" id="action-offline">
+                <span class="action-label">线下</span>
+                <div class="action-icon-background">
+                    <svg t="1753605870281" class="icon" viewBox="0 0 1024 1024" version="1.1"
+                        xmlns="http://www.w3.org/2000/svg" p-id="9698">
+                        <path
+                            d="M1022.96192 499.925333a221.226667 221.226667 0 0 0-8.533333-41.856A215.253333 215.253333 0 0 0 872.56192 317.44a204.032 204.032 0 0 0-32.298667-7.04c-1.066667-4.096-1.962667-8.149333-3.242666-12.16a246.186667 246.186667 0 0 0-30.762667-63.402667 243.072 243.072 0 0 0-29.866667-35.84 245.333333 245.333333 0 0 0-289.834666-41.386666 243.626667 243.626667 0 0 0-58.24 43.733333c-1.493333 1.493333-2.858667 2.986667-4.352 4.437333a249.173333 249.173333 0 0 0-62.592-48.213333 247.978667 247.978667 0 0 0-68.181334-24.746667 242.432 242.432 0 0 0-73.813333-3.626666 245.333333 245.333333 0 0 0-91.52 28.032c-6.869333 3.754667-13.653333 7.850667-20.138667 12.16-6.528 4.266667-12.8 8.96-18.773333 13.952A249.088 249.088 0 0 0 29.42592 254.848 233.301333 233.301333 0 0 0 1.308587 345.6a240.597333 240.597333 0 0 0 84.48 209.237333l273.578666 238.250667a97.706667 97.706667 0 0 0 38.912 20.992 100.864 100.864 0 0 0 25.728 3.754667 98.730667 98.730667 0 0 0 42.112-9.984 98.773333 98.773333 0 0 0 22.528-14.890667l11.818667-10.197333 100.693333 87.722666A103.594667 103.594667 0 0 0 667.76192 896h0.682667a107.349333 107.349333 0 0 0 43.605333-10.24 102.229333 102.229333 0 0 0 23.125333-15.317333l213.034667-185.6a214.826667 214.826667 0 0 0 55.978667-73.173334 212.906667 212.906667 0 0 0 18.773333-111.786666z m-50.432 39.68a162.773333 162.773333 0 0 1-32.426667 80.938667 168.832 168.832 0 0 1-24.917333 26.197333L701.895253 832.426667a50.261333 50.261333 0 0 1-11.776 7.68 52.864 52.864 0 0 1-21.973333 5.205333 55.04 55.04 0 0 1-13.141333-1.92 52.608 52.608 0 0 1-20.608-11.093333l-213.632-186.026667a166.784 166.784 0 0 1-42.922667-56.064 161.706667 161.706667 0 0 1-14.293333-85.418667 161.322667 161.322667 0 0 1 27.349333-74.752 165.802667 165.802667 0 0 1 44.757333-44.416 163.925333 163.925333 0 0 1 43.093334-20.522666 169.344 169.344 0 0 1 49.194666-7.381334 167.466667 167.466667 0 0 1 79.061334 19.968 168.832 168.832 0 0 1 39.424 29.738667l21.248 21.973333 21.76-21.973333a163.925333 163.925333 0 0 1 85.589333-46.208c16.341333-3.413333 33.28-4.181333 49.92-2.474667 10.965333 1.109333 21.802667 3.285333 32.213333 6.442667a166.4 166.4 0 0 1 67.754667 40.746667 165.077333 165.077333 0 0 1 40.832 67.072c3.328 10.410667 5.546667 21.205333 6.528 32 0.597333 5.546667 0.938667 11.221333 0.938667 16.896 0.341333 5.76 0 11.690667-0.682667 17.706666z">
+                        </path>
+                    </svg>
+                </div>
+
+            </div>
+            <div class="action-item" id="action-reply">
+                <span class="action-label">回复</span>
+                <div class="action-icon-background">
+                    <svg t="1753605914031" class="icon" viewBox="0 0 1029 1024" version="1.1"
+                        xmlns="http://www.w3.org/2000/svg" p-id="11628">
+                        <path
+                            d="M939.776 46.545455H95.837091C46.219636 46.545455 0 94.626909 0 144.244364v618.891636C0 812.8 46.219636 861.090909 95.837091 861.090909h306.734545l115.2 115.153455L632.971636 861.090909h306.804364C989.44 861.090909 1024 812.8 1024 763.159273V662.341818l2.792727-3.490909 3.025455-518.446545C1029.818182 90.763636 989.44 46.545455 939.776 46.545455zM308.363636 515.863273a60.113455 60.113455 0 1 1 0-120.226909 60.113455 60.113455 0 0 1 0 120.226909z m209.454546 0a60.113455 60.113455 0 1 1 0-120.226909 60.113455 60.113455 0 0 1 0 120.226909z m209.454545 0a60.113455 60.113455 0 1 1 0-120.226909 60.113455 60.113455 0 0 1 0 120.226909z">
+                        </path>
+                    </svg>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="sticker-panel">
+        <div id="sticker-panel-header">
+            <span class="panel-btn" id="close-sticker-panel-btn">取消</span>
+            <span class="title">我的表情</span>
+            <div style="display: flex; gap: 10px;">
+                <span class="panel-btn" id="add-sticker-btn">添加</span>
+                <span class="panel-btn" id="upload-sticker-btn">上传</span>
+            </div>
+        </div>
+        <div id="sticker-grid"></div>
+    </div>
+    <input type="file" id="sticker-upload-input" accept="image/*" style="display: none;">
+    <input type="file" id="image-upload-input" accept="image/*" style="display: none;">
+</div>
+
+<!-- api设置界面  -->
+
+    <div id="api-settings-modal" class="modal-container">
+        <div class="modal-overlay"></div>
+        <div class="modal-content">
+            <div id="modal-close-handle" class="modal-handle"></div>
+            <h3>API 设置</h3>
+            <div class="form-group">
+                <label for="api-url">URL</label>
+                <input type="text" id="api-url" placeholder="请输入 API 的 URL">
+            </div>
+            <div class="form-group">
+                <label for="api-key">KEY</label>
+                <input type="password" id="api-key" placeholder="请输入您的 API Key">
+            </div>
+            <button id="connect-api-button" class="connect-button">连接</button>
+            <div class="form-group">
+                <select id="api-model" disabled>
+                    <option value="" disabled selected>请先连接API以加载模型</option>
+                </select>
+            </div>
+            <div class="form-group slider-group">
+                <label for="temperature-slider">
+                    <span>温度</span>
+                    <span id="temperature-value">1.0</span>
+                </label>
+                <div class="slider-wrapper">
+                    <span>0</span>
+                    <input type="range" id="temperature-slider" min="0" max="2" value="1" step="0.1">
+                    <span>2</span>
+                </div>
+            </div>
+<button id="save-api-button" class="modal-action-button" disabled>保存</button>
+            <p class="footer-note">1. URL不需要填v1，连接失败检查是否填写错误、网络质量是否达标<br>2.请不要随意把KEY和URL分享给他人<br>3.此小手机无偿且不支持任何商业行为，如果你是购买api或者酒馆等相关物品得到此小手机，请立即联系商贩退款</p>
+        </div>
+    </div>
+    <div id="wallpaper-settings-modal" class="modal-container">
+        <div class="modal-overlay"></div>
+        <div class="modal-content">
+            <div id="wallpaper-modal-close-handle" class="modal-handle"></div>
+
+            <div id="reset-wallpaper-btn">
+                <svg width="27" height="27" viewBox="0 0 27 27" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path
+                        d="M0.199951 13.5C0.199951 17.0274 1.6012 20.4103 4.09543 22.9045C6.58967 25.3988 9.97257 26.8 13.5 26.8C17.0273 26.8 20.4102 25.3988 22.9045 22.9045C25.3987 20.4103 26.8 17.0274 26.8 13.5C26.8 9.97263 25.3987 6.58973 22.9045 4.09549C20.4102 1.60126 17.0273 0.200012 13.5 0.200012C9.97257 0.200012 6.58967 1.60126 4.09543 4.09549C1.6012 6.58973 0.199951 9.97263 0.199951 13.5Z"
+                        fill="#3889FF" />
+                    <path
+                        d="M19.1687 15.6313C18.1125 17.95 15.9875 19.55 13.5 19.55C10.2 19.55 7.5125 16.8625 7.5125 13.55C7.5125 10.2375 10.2 7.55 13.5 7.55C15.025 7.55 16.4 8.1125 17.425 9.05L15.65 10.825H20.45V6.025L18.7375 7.7375C17.3875 6.4625 15.55 5.6 13.5 5.6C9.1375 5.6 5.5625 9.175 5.5625 13.55C5.5625 17.925 9.1375 21.5 13.5 21.5C16.5125 21.5 19.1 19.7 20.1812 17.1L19.1687 15.6313Z"
+                        fill="white" />
+                </svg>
+            </div>
+
+            <div id="wallpaper-preview"></div>
+
+            <div id="upload-wallpaper-btn"
+                style="cursor: pointer; padding-left: 10px; padding-right: 10px; padding-top: 4px; padding-bottom: 4px; background: #F2F2F7; border-radius: 40px; justify-content: center; align-items: center; gap: 3px; display: inline-flex">
+                <div
+                    style="color: #007AFF; font-size: 15px; font-family: SF Pro; font-weight: 400; line-height: 20px; word-wrap: break-word">
+                    点击上传</div>
+            </div>
+            <div id="apply-wallpaper-btn"
+                style="cursor: pointer; padding-left: 10px; padding-right: 10px; padding-top: 4px; padding-bottom: 4px; background: #007AFF; border-radius: 40px; justify-content: center; align-items: center; gap: 3px; display: inline-flex">
+<div id="apply-wallpaper-btn" class="modal-action-button">应用</div>
+            </div>
+        </div>
+        <input type="file" id="wallpaper-upload-input" accept="image/*" style="display: none;">
+    </div>
+    <div id="delete-confirm-modal" style="display: none;">
+    <div class="delete-modal-overlay"></div>
+    <div class="delete-modal-content">
+        <div class="delete-modal-text">
+            <p class="title">确定要删除此对话吗？</p>
+            <p class="subtitle">此操作不可撤销。</p>
+        </div>
+        <div class="delete-modal-actions">
+            <button id="confirm-delete-btn" class="action-btn destructive">删除</button>
+            <button id="cancel-delete-btn" class="action-btn">取消</button>
+        </div>
+    </div>
+</div>
+
+
+    
+<script>
+        document.addEventListener('DOMContentLoaded', async () => {
+        
+            const db = new Dexie('HomePageDB');
+            db.version(2).stores({ 
+                settings: '&id',
+                characters: '++id, name, timestamp', 
+            }).upgrade(tx => {
+                console.log("Database upgraded to version 2.");
+            });
+    
+            const defaultWallpaperUrl = "url('https://images.unsplash.com/photo-1554189097-7e76a28bde39')";
+            let state = {
+    api: { url: '', key: '', model: '' },
+    theme: 'light',
+    wallpaper: defaultWallpaperUrl,
+    temperature: 1.0,
+    chats: { 
+        'char_1': {
+            id: 'char_1',
+            name: '默认聊天',
+            avatar: 'https://i.postimg.cc/cLPP10Vm/4.jpg', // 对方头像
+            history: [
+                { role: 'ai', content: '你好！我们现在可以开始聊天了。', timestamp: Date.now() - 200000 }
+            ]
+        }
+    }
+};
+    
+            const body = document.body;
+            const statusBar = document.getElementById('status-bar');
+            const dynamicIsland = document.getElementById('dynamic-island');
+    
+            // --- 主屏幕元素 ---
+            const homeScreen = document.getElementById('home-screen');
+    
+            // --- 设置屏幕元素 ---
+            const settingsScreen = document.getElementById('settings-screen');
+            const darkModeToggle = document.getElementById('dark-mode-toggle');
+            const apiSettingsTrigger = document.getElementById('api-settings-trigger');
+            const wallpaperSettingsTrigger = document.getElementById('wallpaper-settings-trigger');
+    
+            // --- 微信屏幕元素 ---
+            const wechatScreen = document.getElementById('wechat-screen');
+            const wechatContent = wechatScreen.querySelector('.wechat-content');
+            const openCharCreatorBtn = document.getElementById('open-char-creator-btn'); 
+    
+            // --- API 设置弹窗元素 ---
+            const apiModal = document.getElementById('api-settings-modal');
+            const apiUrlInput = document.getElementById('api-url');
+            const apiKeyInput = document.getElementById('api-key');
+            const connectButton = document.getElementById('connect-api-button');
+            const modelSelect = document.getElementById('api-model');
+            const saveApiButton = document.getElementById('save-api-button');
+            const tempSlider = document.getElementById('temperature-slider');
+            const tempValueSpan = document.getElementById('temperature-value');
+    
+            // --- 壁纸设置弹窗元素 ---
+            const wallpaperModal = document.getElementById('wallpaper-settings-modal');
+            const wallpaperPreview = document.getElementById('wallpaper-preview');
+            const uploadWallpaperBtn = document.getElementById('upload-wallpaper-btn');
+            const wallpaperUploadInput = document.getElementById('wallpaper-upload-input');
+            const applyWallpaperBtn = document.getElementById('apply-wallpaper-btn');
+            const resetWallpaperBtn = document.getElementById('reset-wallpaper-btn');
+            let newWallpaperDataUrl = null;
+    
+            // --- 创建角色弹窗元素 ---
+            const createCharacterModal = document.getElementById('create-character-screen');
+            const avatarSection = createCharacterModal.querySelector('.avatar-section');
+            const charAvatarImg = createCharacterModal.querySelector('.char-avatar');
+            const charNameInput = createCharacterModal.querySelector('.char-input[placeholder="姓名"]');
+            const charPersonaTextarea = createCharacterModal.querySelector('.char-textarea');
+            const saveCharButton = createCharacterModal.querySelector('.save-char-button');
+            const charFileInput = document.createElement('input');
+            charFileInput.type = 'file';
+            charFileInput.accept = 'image/*';
+            charFileInput.style.display = 'none';
+            createCharacterModal.appendChild(charFileInput);
+            let newAvatarDataUrl = null;
+              
+
+            // --- 状态与设置管理 ---
+            async function loadAllSettings() {
+                const savedState = await db.settings.get('main');
+                if (savedState) {
+                    state = { ...state, ...savedState };
+                }
+                applyAllSettings();
+            }
+    
+            async function saveStateToDB() {
+                try {
+                    await db.settings.put({ id: 'main', ...state });
+                } catch (error) {
+                    console.error("Failed to save state to DB:", error);
+                }
+            }
+    
+            // --- UI 应用函数 ---
+            function applyAllSettings() {
+                applyTheme(state.theme === 'dark');
+                applyWallpaper();
+                updateApiSettingsDisplay();
+                updateTemperatureSlider();
+            }
+    
+            function applyWallpaper() {
+                body.style.backgroundImage = state.wallpaper;
+                homeScreen.style.backgroundColor = state.wallpaper.startsWith('url(') ? 'transparent' : '';
+            }
+    
+            function applyTheme(isDark) {
+                body.classList.toggle('dark-mode', isDark);
+                if (darkModeToggle) darkModeToggle.classList.toggle('on', isDark);
+                const currentScreen = document.querySelector('.screen.active');
+                const isHomeScreen = !currentScreen || currentScreen.id === 'home-screen';
+                if (statusBar) statusBar.classList.toggle('dark-text', !isHomeScreen && !isDark);
+                if ('getBattery' in navigator) navigator.getBattery().then(updateBattery);
+            }
+    
+            function updateApiSettingsDisplay() {
+                if(apiUrlInput) apiUrlInput.value = state.api.url || '';
+                if(apiKeyInput) apiKeyInput.value = state.api.key || '';
+                const apiSettingsValue = document.querySelector('#api-settings-trigger .value');
+                if (apiSettingsValue) {
+                    apiSettingsValue.textContent = state.api.model || 'not yet';
+                }
+            }
+            
+            function updateTemperatureSlider() {
+                if(tempSlider) {
+                    tempSlider.value = state.temperature;
+                    updateSliderProgress();
+                }
+            }
+    
+            function updateSliderProgress() {
+                if (tempSlider && tempValueSpan) {
+                    const value = parseFloat(tempSlider.value);
+                    const min = parseFloat(tempSlider.min);
+                    const max = parseFloat(tempSlider.max);
+                    const percentage = (value - min) * 100 / (max - min);
+                    tempSlider.style.setProperty("--progress-percent", `${percentage}%`);
+                    tempValueSpan.textContent = value.toFixed(1);
+                }
+            }
+            
+            // --- 状态栏更新 ---
+            function updateTime() {
+                const now = new Date();
+                const hours = String(now.getHours()).padStart(2, '0');
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+                const timeEl = document.getElementById("status-bar-time");
+                if (timeEl) timeEl.textContent = `${hours}:${minutes}`;
+            }
+    
+            function updateBattery(battery) {
+                const level = Math.floor(battery.level * 100);
+                const isCharging = battery.charging;
+                const normalWrapper = document.getElementById("battery-normal-wrapper");
+                const chargingWrapper = document.getElementById("battery-charging-wrapper");
+                const normalFill = document.getElementById("battery-normal-fill");
+                const chargingFill = document.getElementById("battery-charging-fill");
+    
+                const fillWidth = 22 * (level / 100);
+                const isDarkText = statusBar.classList.contains("dark-text");
+                const defaultFillColor = isDarkText ? "black" : "var(--label-colordarkprimary)";
+                
+                if(normalWrapper) normalWrapper.style.display = isCharging ? "none" : "block";
+                if(chargingWrapper) chargingWrapper.style.display = isCharging ? "block" : "none";
+                
+                if(isCharging && chargingFill) {
+                    chargingFill.setAttribute("width", fillWidth);
+                } else if (!isCharging && normalFill) {
+                    normalFill.setAttribute("width", fillWidth);
+                    normalFill.setAttribute("fill", level <= 20 ? "#ff3b30" : defaultFillColor);
+                }
+            }
+            
+            async function initStatus() {
+                updateTime();
+                setInterval(updateTime, 30000);
+                if ('getBattery' in navigator) {
+                    try {
+                        const battery = await navigator.getBattery();
+                        updateBattery(battery);
+                        battery.addEventListener("levelchange", () => updateBattery(battery));
+                        battery.addEventListener("chargingchange", () => updateBattery(battery));
+                    } catch (err) {
+                        console.error("无法获取电池信息:", err);
+                    }
+                }
+                applyWallpaper();
+            }
+    
+            // --- 页面导航和弹窗 ---
+            window.showScreen = function(screenId) {
+                if (screenId === 'wechat-screen') {
+                    loadChatList();
+                }
+                const currentActiveScreen = document.querySelector(".screen.active");
+                const screenToShow = document.getElementById(screenId);
+                if (currentActiveScreen && screenToShow && currentActiveScreen.id !== screenId) {
+                    currentActiveScreen.classList.add("closing");
+                    currentActiveScreen.addEventListener("transitionend", () => {
+                        currentActiveScreen.classList.remove("active", "closing");
+                    }, { once: true });
+                    setTimeout(() => screenToShow.classList.add("active"), 50);
+                }
+                applyTheme(body.classList.contains('dark-mode'));
+            };
+            
+            window.openApp = function(screenId, iconElement) {
+                if (iconElement.classList.contains('animating')) return;
+                iconElement.classList.add('animating');
+                setTimeout(() => {
+                    showScreen(screenId);
+                    iconElement.classList.remove('animating');
+                }, 300);
+            };
+    
+            function openModal(modalId) {
+                const modal = document.getElementById(modalId);
+                if (modal) {
+                    body.classList.add("modal-is-open");
+                    modal.style.display = "flex";
+                    setTimeout(() => modal.classList.add("active"), 10);
+                }
+            }
+    
+            function closeModal(modalId) {
+                const modal = document.getElementById(modalId);
+                if (modal) {
+                    body.classList.remove("modal-is-open");
+                    modal.classList.remove("active");
+                    modal.addEventListener('transitionend', () => {
+                        modal.style.display = 'none';
+                    }, { once: true });
+                }
+            }
+    
+            let islandTimeout;
+            window.activeCharacterId = null;
+            window.showDynamicIslandNotification = function(config) {
+                if (!dynamicIsland) return;
+                const diTitle = dynamicIsland.querySelector(".di-title");
+                clearTimeout(islandTimeout);
+                diTitle.textContent = config.title || "通知";
+                dynamicIsland.style.width = "";
+                dynamicIsland.classList.add("expanded");
+    
+                const duration = config.duration === null ? null : (config.duration || 2500);
+                if (duration !== null) {
+                    islandTimeout = setTimeout(() => {
+                        dynamicIsland.classList.remove("expanded");
+                    }, duration);
+                }
+            };
+    
+            // --- 聊天和角色功能 ---
+            async function loadChatList() {
+                if (!wechatContent) return;
+                const allCharacters = await db.characters.orderBy('timestamp').reverse().toArray();
+                wechatContent.innerHTML = '';
+                if (allCharacters.length === 0) {
+                    wechatContent.innerHTML = '<p style="text-align:center; color:#b2b2b2; margin-top: 40px;">还没有朋友，点击右上角“+”添加一个吧</p>';
+                    return;
+                }
+                allCharacters.forEach(char => {
+                    const date = new Date(char.timestamp);
+                    const timeString = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+                    const chatItemHTML = `
+                        <div class="chat-item" data-id="${char.id}">
+                            <img class="avatar" src="${char.avatar}" alt="avatar">
+                            <div class="message-details">
+                                <div class="name-time">
+                                    <span class="name">${char.name}</span>
+                                    <span class="time">${timeString}</span>
+                                </div>
+                                <div class="last-message">${char.lastMessage}</div>
+                            </div>
+                        </div>`;
+                    wechatContent.insertAdjacentHTML('beforeend', chatItemHTML);
+                });
+                wechatContent.querySelectorAll('.chat-item').forEach(item => {
+                    item.addEventListener('click', () => {
+                        const characterId = parseInt(item.dataset.id);
+                        openChat(characterId);
+                    });
+                });
+            }
+
+            function openChat(characterId) {
+                window.activeCharacterId = characterId;
+                renderChatInterface(characterId);
+                showScreen('chat-interface-screen');
+            }
+            async function renderChatInterface(characterId) {
+
+    const char = await db.characters.get(characterId);
+
+
+    if (!char) {
+        console.error("Error: Could not find character with ID " + characterId);
+        showScreen('wechat-screen'); 
+        return;
+    }
+
+  
+    const chatHeaderTitle = document.getElementById('chat-header-title');
+    chatHeaderTitle.textContent = char.name; 
+
+
+    const messagesContainer = document.getElementById('chat-messages');
+    messagesContainer.innerHTML = ''; 
+
+    if (char.history && char.history.length > 0) {
+        char.history.forEach(msg => {
+            const messageEl = createMessageElement(msg, char);
+            messagesContainer.appendChild(messageEl);
+        });
+    } else {
+        const welcomeEl = createSystemMessageElement(`你已添加了${char.name}，现在可以开始聊天了。`);
+        messagesContainer.appendChild(welcomeEl);
+    }
+
+
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+            function createMessageElement(msg, character) {
+    const isUser = msg.role === 'user';
+    const wrapper = document.createElement('div');
+    wrapper.className = `message-wrapper ${isUser ? 'user' : 'ai'}`;
+
+    const bubble = document.createElement('div');
+    bubble.className = `message-bubble ${isUser ? 'user' : 'ai'}`;
+
+    const userAvatar = 'https://i.postimg.cc/cLPP10Vm/4.jpg';
+    const avatarSrc = isUser ? userAvatar : character.avatar;
+
+    const contentHtml = String(msg.content || '').replace(/\n/g, '<br>');
+
+
+    bubble.innerHTML = `
+        <img src="${avatarSrc}" class="avatar">
+        <div class="content">${contentHtml}</div>
+    `;
+
+    wrapper.appendChild(bubble);
+    return wrapper;
+}
+            
+            async function saveCharacter() {
+                 const name = charNameInput.value.trim();
+                 const persona = charPersonaTextarea.value.trim();
+                 if (!name) {
+                     showDynamicIslandNotification({ title: '姓名不能为空' });
+                     return;
+                 }
+                 const newCharacter = {
+                     name: name,
+                     persona: persona,
+                     avatar: newAvatarDataUrl || charAvatarImg.src || 'https://i.postimg.cc/cLPP10Vm/4.jpg', // Default avatar
+                     lastMessage: "快来和我聊天吧！",
+                     timestamp: new Date().getTime()
+                 };
+                 try {
+                     await db.characters.add(newCharacter);
+                     showDynamicIslandNotification({ title: '保存成功' });
+                     charNameInput.value = '';
+                     charPersonaTextarea.value = '';
+                     charAvatarImg.src = '';
+                     newAvatarDataUrl = null;
+                     charFileInput.value = '';
+                     closeModal('create-character-screen');
+                     loadChatList();
+                 } catch (error) {
+                     console.error('保存角色失败:', error);
+                     showDynamicIslandNotification({ title: '保存失败' });
+                 }
+            }
+            function createMessageElement(msg, character) {
+    const isUser = msg.role === 'user';
+    const wrapper = document.createElement('div');
+    wrapper.className = `message-wrapper ${isUser ? 'user' : 'ai'}`;
+
+    const bubble = document.createElement('div');
+    bubble.className = `message-bubble ${isUser ? 'user' : 'ai'}`;
+    bubble.dataset.timestamp = msg.timestamp;
+
+    const userAvatar = 'https://youke1.picui.cn/s1/2025/07/29/68888a5033a94.png'; 
+    const avatarSrc = isUser ? userAvatar : character.avatar;
+
+    const contentHtml = String(msg.content || '').replace(/\n/g, '<br>');
+
+    bubble.innerHTML = `
+        <div class="avatar-group">
+             <img src="${avatarSrc}" class="avatar">
+        </div>
+        <div class="content">${contentHtml}</div>
+    `;
+
+    wrapper.appendChild(bubble);
+    return wrapper;
+}
+
+function renderChatInterface(characterId) {
+    const chat = state.chats[characterId];
+    if (!chat) {
+        console.error("找不到聊天数据: ", characterId);
+        return;
+    }
+
+    document.getElementById('chat-header-title').textContent = chat.name;
+    const messagesContainer = document.getElementById('chat-messages');
+    messagesContainer.innerHTML = ''; 
+    
+    let lastMessageTimestamp = 0;
+    chat.history.forEach(msg => {
+
+        if (lastMessageTimestamp && (msg.timestamp - lastMessageTimestamp > 180000)) { 
+            const timeDiv = document.createElement('div');
+            timeDiv.className = 'system-message';
+            const msgDate = new Date(msg.timestamp);
+            const timePart = msgDate.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false });
+            timeDiv.innerHTML = `<span class="timestamp-bg">${timePart}</span>`;
+            messagesContainer.appendChild(timeDiv);
+        }
+
+        const messageEl = createMessageElement(msg, chat);
+        messagesContainer.appendChild(messageEl);
+        lastMessageTimestamp = msg.timestamp;
+    });
+
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+            document.querySelectorAll('.modal-overlay, .modal-handle, #modal-close-handle, #wallpaper-modal-close-handle').forEach(el => {
+                el.addEventListener('click', () => {
+                    const modal = el.closest('.modal-container');
+                    if (modal) closeModal(modal.id);
+                });
+            });
+    
+            if(darkModeToggle) darkModeToggle.addEventListener('click', () => {
+                state.theme = body.classList.contains('dark-mode') ? 'light' : 'dark';
+                applyTheme(state.theme === 'dark');
+                saveStateToDB();
+            });
+            if(apiSettingsTrigger) apiSettingsTrigger.addEventListener('click', () => openModal('api-settings-modal'));
+            if(wallpaperSettingsTrigger) wallpaperSettingsTrigger.addEventListener('click', () => openModal('wallpaper-settings-modal'));
+    
+            if(connectButton) connectButton.addEventListener('click', async () => {
+                const apiUrl = apiUrlInput.value, apiKey = apiKeyInput.value;
+                if (!apiUrl || !apiKey) return showDynamicIslandNotification({ title: 'URL和Key不能为空' });
+                connectButton.textContent = "连接中...";
+                connectButton.disabled = true;
+                try {
+                    const response = await fetch(`${apiUrl}/v1/models`, { headers: { 'Authorization': `Bearer ${apiKey}` } });
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    const data = await response.json();
+                    modelSelect.innerHTML = '<option value="" disabled>选择模型</option>';
+                    data.data.map(m => m.id).sort().forEach(id => modelSelect.innerHTML += `<option value="${id}">${id}</option>`);
+                    modelSelect.disabled = false;
+                    saveApiButton.disabled = false;
+                    connectButton.textContent = "已连接";
+                    showDynamicIslandNotification({ title: "连接成功" });
+                } catch(e) {
+                    console.error("API连接失败: ", e);
+                    showDynamicIslandNotification({ title: "连接失败" });
+                    connectButton.textContent = "重试";
+                    connectButton.disabled = false;
+                }
+            });
+            if(saveApiButton) saveApiButton.addEventListener('click', () => {
+                state.api.url = apiUrlInput.value.trim();
+                state.api.key = apiKeyInput.value.trim();
+                state.api.model = modelSelect.value;
+                state.temperature = parseFloat(tempSlider.value);
+                saveStateToDB().then(() => {
+                    updateApiSettingsDisplay();
+                    showDynamicIslandNotification({ title: '设置已保存' });
+                    setTimeout(() => closeModal('api-settings-modal'), 1500);
+                });
+            });
+            if(tempSlider) tempSlider.addEventListener('input', updateSliderProgress);
+            
+            if(uploadWallpaperBtn) uploadWallpaperBtn.addEventListener('click', () => wallpaperUploadInput.click());
+            if(wallpaperUploadInput) wallpaperUploadInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if(file) {
+                    const reader = new FileReader();
+                    reader.onload = (ev) => {
+                        newWallpaperDataUrl = `url(${ev.target.result})`;
+                        wallpaperPreview.style.backgroundImage = newWallpaperDataUrl;
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+            if(applyWallpaperBtn) applyWallpaperBtn.addEventListener('click', () => {
+                if (newWallpaperDataUrl) {
+                    state.wallpaper = newWallpaperDataUrl;
+                    saveStateToDB().then(() => {
+                        applyWallpaper();
+                        showDynamicIslandNotification({ title: '壁纸已应用' });
+                    });
+                }
+                closeModal('wallpaper-settings-modal');
+            });
+            if(resetWallpaperBtn) resetWallpaperBtn.addEventListener('click', () => {
+                state.wallpaper = defaultWallpaperUrl;
+                saveStateToDB().then(() => {
+                    applyWallpaper();
+                    showDynamicIslandNotification({ title: '已恢复默认壁纸' });
+                });
+                closeModal('wallpaper-settings-modal');
+            });
+            
+            if (openCharCreatorBtn) {
+                openCharCreatorBtn.addEventListener('click', () => {
+                    openModal('create-character-screen');
+                });
+            }
+    
+            if(avatarSection) avatarSection.addEventListener('click', () => charFileInput.click());
+            if(charFileInput) charFileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if(file) {
+                    const reader = new FileReader();
+                    reader.onload = (ev) => {
+                        newAvatarDataUrl = ev.target.result;
+                        charAvatarImg.src = newAvatarDataUrl;
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+            if(saveCharButton) saveCharButton.addEventListener('click', saveCharacter);
+    
+            await loadAllSettings();
+            await initStatus();
+            await loadChatList();
+
+            const deleteConfirmModal = document.getElementById('delete-confirm-modal');
+            const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
+            const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
+            let longPressTimer;
+            let charIdToDelete = null;
+
+            wechatContent.addEventListener('mousedown', handlePressStart);
+            wechatContent.addEventListener('touchstart', handlePressStart, { passive: true });
+            wechatContent.addEventListener('mouseup', handlePressEnd);
+            wechatContent.addEventListener('mouseleave', handlePressEnd);
+            wechatContent.addEventListener('touchend', handlePressEnd);
+            wechatContent.addEventListener('touchmove', handlePressEnd);
+
+            function handlePressStart(e) {
+                const targetItem = e.target.closest('.chat-item');
+                if (!targetItem) return;
+                charIdToDelete = targetItem.dataset.id;
+                longPressTimer = setTimeout(() => {
+                    deleteConfirmModal.style.display = 'flex';
+                    setTimeout(() => deleteConfirmModal.classList.add('visible'), 10);
+                }, 500);
+            }
+
+            function handlePressEnd(e) {
+                clearTimeout(longPressTimer);
+            }
+
+            function closeDeleteModal() {
+                deleteConfirmModal.classList.remove('visible');
+                deleteConfirmModal.addEventListener('transitionend', () => {
+                    deleteConfirmModal.style.display = 'none';
+                }, { once: true });
+            }
+
+            cancelDeleteBtn.addEventListener('click', closeDeleteModal);
+
+            confirmDeleteBtn.addEventListener('click', async () => {
+                if (charIdToDelete) {
+                    try {
+                        await db.characters.delete(parseInt(charIdToDelete));
+                        showDynamicIslandNotification({ title: '已删除' });
+                        await loadChatList();
+                    } catch (error) {
+                        console.error('删除失败:', error);
+                        showDynamicIslandNotification({ title: '删除失败' });
+                    }
+                }
+                closeDeleteModal();
+                charIdToDelete = null;
+            });
+
+
+            document.getElementById('back-to-list-btn').addEventListener('click', () => {
+                window.activeCharacterId = null;
+                showScreen('wechat-screen');
+            });
+
+            document.getElementById('chat-settings-btn').addEventListener('click', () => {
+                showDynamicIslandNotification({ title: '设置功能待开发' });
+            });
+
+            document.getElementById('open-sticker-panel-btn').addEventListener('click', () => {
+                showDynamicIslandNotification({ title: '表情功能待开发' });
+            });
+
+            document.getElementById('plus-btn').addEventListener('click', () => {
+                showDynamicIslandNotification({ title: '更多功能待开发' });
+            });
+
+            const chatInput = document.getElementById('chat-input');
+            const sendBtn = document.getElementById('send-btn');
+            const plusBtn = document.getElementById('plus-btn');
+
+            chatInput.addEventListener('input', () => {
+                const hasText = chatInput.value.trim().length > 0;
+                plusBtn.style.display = hasText ? 'none' : 'flex';
+                sendBtn.style.display = hasText ? 'block' : 'none';
+            });
+
+            sendBtn.addEventListener('click', async () => {
+                const content = chatInput.value.trim();
+                if (!content || !window.activeCharacterId) return;
+                
+                const char = await db.characters.get(window.activeCharacterId);
+                const userMsg = { role: 'user', content: content };
+                const messageEl = createMessageElement(userMsg, char);
+                document.getElementById('chat-messages').appendChild(messageEl);
+                
+                chatInput.value = '';
+                chatInput.dispatchEvent(new Event('input')); 
+                
+            });
+            
+        });
+    </script>
+</body>
+
+</html>
